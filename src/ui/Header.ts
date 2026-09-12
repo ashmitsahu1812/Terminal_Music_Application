@@ -75,10 +75,34 @@ export class HeaderComponent {
       ambientStr = `  │  {blue-fg}${iconMap[state.ambientSound] || state.ambientSound.toUpperCase()}{/blue-fg}`;
     }
 
+    // Pomodoro badge
+    let pomoStr = '';
+    const pomo = this.appStore.getTimerManager().getPomodoroState();
+    if (pomo.phase !== 'idle') {
+      const pMins = Math.floor(pomo.remainingSeconds / 60);
+      const pSecs = pomo.remainingSeconds % 60;
+      const timeFormatted = `${pMins.toString().padStart(2, '0')}:${pSecs.toString().padStart(2, '0')}`;
+      if (pomo.phase === 'work') {
+        pomoStr = `  │  {bold}{red-fg}🍅 [FOCUS ${timeFormatted}]{/red-fg}{/bold}`;
+      } else {
+        pomoStr = `  │  {bold}{green-fg}☕ [BREAK ${timeFormatted}]{/green-fg}{/bold}`;
+      }
+    }
+
+    // Sleep timer badge
+    let sleepStr = '';
+    const sleep = this.appStore.getTimerManager().getSleepTimerState();
+    if (sleep.isActive) {
+      const sMins = Math.floor(sleep.remainingSeconds / 60);
+      const sSecs = sleep.remainingSeconds % 60;
+      const sleepFormatted = `${sMins.toString().padStart(2, '0')}:${sSecs.toString().padStart(2, '0')}`;
+      sleepStr = `  │  {bold}{blue-fg}💤 [SLEEP ${sleepFormatted}]{/blue-fg}{/bold}`;
+    }
+
     const themeStr = `{yellow-fg}Theme:{/yellow-fg} ${config.theme}`;
     const clockStr = `{white-fg}${timeStr}{/white-fg}`;
 
-    return ` ${titleLogo}  │  ${deviceStr}  │  ${speedStr}${ambientStr}  │  ${themeStr}  │  ${clockStr}`;
+    return ` ${titleLogo}  │  ${deviceStr}  │  ${speedStr}${ambientStr}${pomoStr}${sleepStr}  │  ${themeStr}  │  ${clockStr}`;
   }
 
   public destroy(): void {

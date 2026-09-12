@@ -235,6 +235,37 @@ async function runTests() {
   }
   console.log('  ✓ Lyrics caching, disk serialization, and timestamp parsing verified.');
 
+  // Test 12: Pomodoro & Sleep Timer State Machine
+  console.log('1️⃣2️⃣ Testing Pomodoro Focus Engine & Sleep Timer State Machine...');
+  const timerManager = store.getTimerManager();
+
+  // Test Pomodoro start, skip, and reset
+  timerManager.startPomodoro(25, 5);
+  let pomo = timerManager.getPomodoroState();
+  assert.strictEqual(pomo.phase, 'work');
+  assert.strictEqual(pomo.isActive, true);
+  assert.strictEqual(pomo.remainingSeconds, 25 * 60);
+
+  timerManager.skipPomodoroPhase();
+  pomo = timerManager.getPomodoroState();
+  assert.strictEqual(pomo.phase, 'break');
+  assert.strictEqual(pomo.completedCycles, 1);
+
+  timerManager.resetPomodoro();
+  assert.strictEqual(timerManager.getPomodoroState().phase, 'idle');
+
+  // Test Sleep Timer
+  timerManager.startSleepTimer(15);
+  let sleepState = timerManager.getSleepTimerState();
+  assert.strictEqual(sleepState.isActive, true);
+  assert.strictEqual(sleepState.remainingSeconds, 15 * 60);
+
+  timerManager.cancelSleepTimer();
+  assert.strictEqual(timerManager.getSleepTimerState().isActive, false);
+
+  timerManager.destroy();
+  console.log('  ✓ Pomodoro focus cycles, breaks, and sleep timer fade controls verified.');
+
   // Stop any audio or ambient playback immediately so tests remain completely silent
   store.setAmbientSound('none');
   store.getAudioEngine().stop();

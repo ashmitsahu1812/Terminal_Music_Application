@@ -7,6 +7,7 @@ import { AmbientSoundManager } from '../audio/AmbientSoundManager.js';
 import { DiscordRPC } from '../integrations/DiscordRPC.js';
 import { RadioManager } from '../radio/RadioManager.js';
 import { LyricsCacheManager } from '../lyrics/LyricsCacheManager.js';
+import { TimerManager } from '../timer/TimerManager.js';
 
 export class AppStore extends EventEmitter {
   private audioEngine: AudioEngine;
@@ -14,6 +15,7 @@ export class AppStore extends EventEmitter {
   private ambientManager: AmbientSoundManager;
   private radioManager: RadioManager;
   private lyricsCacheManager: LyricsCacheManager;
+  private timerManager: TimerManager;
   private discordRpc: DiscordRPC | null = null;
 
   private tracks: Track[] = [];
@@ -41,6 +43,17 @@ export class AppStore extends EventEmitter {
     this.ambientManager = new AmbientSoundManager(this);
     this.radioManager = new RadioManager();
     this.lyricsCacheManager = new LyricsCacheManager();
+    this.timerManager = new TimerManager(this);
+
+    this.timerManager.on('tick', () => {
+      this.emit('timer-tick');
+    });
+    this.timerManager.on('pomodoro-updated', () => {
+      this.emit('updated');
+    });
+    this.timerManager.on('sleep-updated', () => {
+      this.emit('updated');
+    });
 
     // Sync Audio Engine settings from persisted config
     this.audioEngine.setVolume(this.config.volume);
@@ -407,5 +420,9 @@ export class AppStore extends EventEmitter {
 
   public getLyricsCacheManager(): LyricsCacheManager {
     return this.lyricsCacheManager;
+  }
+
+  public getTimerManager(): TimerManager {
+    return this.timerManager;
   }
 }

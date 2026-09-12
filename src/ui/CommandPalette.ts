@@ -164,6 +164,36 @@ export class CommandPalette {
         }
         break;
       }
+      case 'pomo':
+      case 'pomodoro': {
+        const subParts = arg.trim().split(' ');
+        const sub = subParts[0]?.toLowerCase();
+        if (sub === 'pause') {
+          this.appStore.getTimerManager().pausePomodoro();
+        } else if (sub === 'resume') {
+          this.appStore.getTimerManager().resumePomodoro();
+        } else if (sub === 'reset' || sub === 'stop') {
+          this.appStore.getTimerManager().resetPomodoro();
+        } else if (sub === 'skip') {
+          this.appStore.getTimerManager().skipPomodoroPhase();
+        } else {
+          // :pomo or :pomo start [workMin] [breakMin]
+          const workMin = parseInt(subParts[1], 10) || parseInt(subParts[0], 10) || 25;
+          const breakMin = parseInt(subParts[2], 10) || 5;
+          this.appStore.getTimerManager().startPomodoro(workMin, breakMin);
+        }
+        break;
+      }
+      case 'sleep': {
+        const sub = arg.toLowerCase().trim();
+        if (sub === 'cancel' || sub === 'off' || sub === 'stop') {
+          this.appStore.getTimerManager().cancelSleepTimer();
+        } else {
+          const mins = parseFloat(sub) || 30;
+          this.appStore.getTimerManager().startSleepTimer(mins);
+        }
+        break;
+      }
       case 'speed': {
         const val = parseFloat(arg);
         if (!isNaN(val)) {
