@@ -129,6 +129,20 @@ export class CommandPalette {
         this.appStore.setVaporwave();
         break;
       }
+      case 'radio': {
+        if (!arg) {
+          this.appStore.setActiveTab('radio');
+        } else {
+          const stations = this.appStore.getRadioStations();
+          const match = stations.find((s) => s.name.toLowerCase().includes(arg.toLowerCase()) || s.genre.toLowerCase().includes(arg.toLowerCase()));
+          if (match) {
+            this.appStore.playRadioStation(match);
+          } else {
+            this.appStore.setActiveTab('radio');
+          }
+        }
+        break;
+      }
       case 'speed': {
         const val = parseFloat(arg);
         if (!isNaN(val)) {

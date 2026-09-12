@@ -8,6 +8,7 @@ import { QueueView } from './QueueView.js';
 import { VisualizerView } from './VisualizerView.js';
 import { AlbumArtView } from './AlbumArtView.js';
 import { LyricsView } from './LyricsView.js';
+import { RadioView } from './RadioView.js';
 import { CommandPalette } from './CommandPalette.js';
 import { ShortcutsBar } from './ShortcutsBar.js';
 import { getTheme } from './Theme.js';
@@ -28,6 +29,7 @@ export class UIManager {
   private visualizerView: VisualizerView;
   private albumArtView: AlbumArtView;
   private lyricsView: LyricsView;
+  private radioView: RadioView;
 
   private tabBoxes: Record<ViewTab, blessed.Widgets.BoxElement>;
 
@@ -67,6 +69,7 @@ export class UIManager {
       visualizer: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       art: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       lyrics: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
+      radio: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
     };
 
     // Instantiate views inside container boxes
@@ -76,6 +79,7 @@ export class UIManager {
     this.visualizerView = new VisualizerView(this.tabBoxes.visualizer, this.appStore);
     this.albumArtView = new AlbumArtView(this.tabBoxes.art, this.appStore);
     this.lyricsView = new LyricsView(this.tabBoxes.lyrics, this.appStore);
+    this.radioView = new RadioView(this.tabBoxes.radio, this.appStore);
 
     this.setupGlobalKeybindings();
 
@@ -126,6 +130,9 @@ export class UIManager {
       case 'lyrics':
         this.lyricsView.focus();
         break;
+      case 'radio':
+        this.radioView.focus();
+        break;
     }
   }
 
@@ -140,6 +147,7 @@ export class UIManager {
     this.visualizerView.updateTheme();
     this.albumArtView.updateTheme();
     this.lyricsView.updateTheme();
+    this.radioView.updateTheme();
     this.screen.render();
   }
 
@@ -236,13 +244,14 @@ export class UIManager {
       this.appStore.toggleShuffle();
     });
 
-    // Tab view switching: 1, 2, 3, 4, 5, 6
+    // Tab view switching: 1, 2, 3, 4, 5, 6, 7
     this.screen.key(['1'], () => this.appStore.setActiveTab('library'));
     this.screen.key(['2'], () => this.appStore.setActiveTab('playlists'));
     this.screen.key(['3'], () => this.appStore.setActiveTab('queue'));
     this.screen.key(['4'], () => this.appStore.setActiveTab('visualizer'));
     this.screen.key(['5'], () => this.appStore.setActiveTab('art'));
     this.screen.key(['6'], () => this.appStore.setActiveTab('lyrics'));
+    this.screen.key(['7'], () => this.appStore.setActiveTab('radio'));
 
     // Command palette and search triggers: : and /
     this.screen.key([':'], () => {

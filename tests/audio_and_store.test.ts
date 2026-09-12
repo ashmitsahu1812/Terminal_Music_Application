@@ -7,6 +7,7 @@ import { AppStore } from '../src/store/AppStore.js';
 import { MetadataParser } from '../src/parser/MetadataParser.js';
 import { ANSIArtRenderer } from '../src/parser/ANSIArtRenderer.js';
 import { LyricsEngine } from '../src/lyrics/LyricsEngine.js';
+import { RadioManager } from '../src/radio/RadioManager.js';
 import { getTheme } from '../src/ui/Theme.js';
 import { Track } from '../src/types/index.js';
 
@@ -174,6 +175,30 @@ async function runTests() {
   const synthwaveTheme = getTheme('synthwave');
   assert.strictEqual(synthwaveTheme.name, 'synthwave');
   console.log('  ✓ Visualizer modes, ambient layers, and Chroma themes verified.');
+
+  // Test 10: Internet Radio Directory & Stream Track Conversion
+  console.log('🔟 Testing Internet Radio Directory & Stream Conversion...');
+  const stations = store.getRadioStations();
+  assert.ok(stations.length >= 8);
+  const grooveSalad = stations.find((s) => s.id === 'soma-groovesalad');
+  assert.ok(grooveSalad);
+  assert.strictEqual(grooveSalad.country, 'US');
+
+  const streamTrack = RadioManager.stationToTrack(grooveSalad);
+  assert.strictEqual(streamTrack.format, 'STREAM');
+  assert.strictEqual(streamTrack.filePath, grooveSalad.streamUrl);
+
+  const customStation = store.getRadioManager().addStation({
+    name: 'Custom Vapor Stream',
+    genre: 'Vaporwave',
+    streamUrl: 'http://custom.stream/radio.mp3',
+    description: 'Custom Test Radio',
+  });
+  assert.ok(customStation.id.startsWith('custom-radio-'));
+  assert.strictEqual(store.getRadioStations().length, stations.length + 1);
+  store.getRadioManager().removeCustomStation(customStation.id);
+  assert.strictEqual(store.getRadioStations().length, stations.length);
+  console.log('  ✓ Radio stations directory, custom station management, and streaming tracks verified.');
 
   // Stop any audio or ambient playback immediately so tests remain completely silent
   store.setAmbientSound('none');

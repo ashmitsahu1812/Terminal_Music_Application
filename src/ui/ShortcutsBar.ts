@@ -50,10 +50,12 @@ export class ShortcutsBar {
       tabInfo = '{yellow-fg}[v]{/yellow-fg} Switch Mode';
     } else if (activeTab === 'lyrics') {
       tabInfo = 'Karaoke Synced';
+    } else if (activeTab === 'radio') {
+      tabInfo = '📡 [Enter] Stream Radio Station';
     } else {
       tabInfo = '24-bit ANSI Art';
     }
 
-    return ` {bold}[Space]{/bold} Play/Pause │ {bold}[1-6]{/bold} Tabs │ {bold}[[/]]{/bold} Speed │ {bold}[v]{/bold} Vis │ {bold}[w]{/bold} Ambient │ {bold}[/]{/bold} Search │ {bold}[:]{/bold} Cmd │ ${tabInfo}`;
+    return ` {bold}[Space]{/bold} Play/Pause │ {bold}[1-7]{/bold} Tabs │ {bold}[[/]]{/bold} Speed │ {bold}[v]{/bold} Vis │ {bold}[w]{/bold} Ambient │ {bold}[/]{/bold} Search │ {bold}[:]{/bold} Cmd │ ${tabInfo}`;
   }
 }

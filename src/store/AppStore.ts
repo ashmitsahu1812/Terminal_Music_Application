@@ -1,15 +1,17 @@
 import { EventEmitter } from 'events';
 import Fuse from 'fuse.js';
-import { Track, Playlist, AppConfig, LoopMode, ViewTab, VisualizerMode, AmbientSoundType, EQPreset } from '../types/index.js';
+import { Track, Playlist, AppConfig, LoopMode, ViewTab, VisualizerMode, AmbientSoundType, EQPreset, RadioStation } from '../types/index.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { StorageManager } from '../storage/StorageManager.js';
 import { AmbientSoundManager } from '../audio/AmbientSoundManager.js';
 import { DiscordRPC } from '../integrations/DiscordRPC.js';
+import { RadioManager } from '../radio/RadioManager.js';
 
 export class AppStore extends EventEmitter {
   private audioEngine: AudioEngine;
   private storageManager: StorageManager;
   private ambientManager: AmbientSoundManager;
+  private radioManager: RadioManager;
   private discordRpc: DiscordRPC | null = null;
 
   private tracks: Track[] = [];
@@ -35,6 +37,7 @@ export class AppStore extends EventEmitter {
     this.initFuse();
 
     this.ambientManager = new AmbientSoundManager(this);
+    this.radioManager = new RadioManager();
 
     // Sync Audio Engine settings from persisted config
     this.audioEngine.setVolume(this.config.volume);
@@ -383,5 +386,19 @@ export class AppStore extends EventEmitter {
 
   public getAmbientManager(): AmbientSoundManager {
     return this.ambientManager;
+  }
+
+  // Radio Management
+  public getRadioStations(): RadioStation[] {
+    return this.radioManager.getAllStations();
+  }
+
+  public playRadioStation(station: RadioStation): void {
+    const track = RadioManager.stationToTrack(station);
+    this.playTrack(track);
+  }
+
+  public getRadioManager(): RadioManager {
+    return this.radioManager;
   }
 }

@@ -70,7 +70,17 @@ export interface AppConfig {
   discordRpcEnabled: boolean;
 }
 
-export type ViewTab = 'library' | 'playlists' | 'queue' | 'visualizer' | 'art' | 'lyrics';
+export interface RadioStation {
+  id: string;
+  name: string;
+  genre: string;
+  streamUrl: string;
+  description: string;
+  bitrate?: string;
+  country?: string;
+}
+
+export type ViewTab = 'library' | 'playlists' | 'queue' | 'visualizer' | 'art' | 'lyrics' | 'radio';
 
 export interface Command {
   name: string;
