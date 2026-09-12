@@ -321,12 +321,12 @@ export class CommandPalette {
         const outDir = parts[2] || (process.env.HOME + '/Music/Playlists');
         if (sub === 'all') {
           const files = this.appStore.exportAllPlaylists(outDir);
-          process.title = `Exported ${files.length} playlists to ${outDir}`;
+          this.appStore.showToast(`Exported ${files.length} playlists to ${outDir}`, 'success');
         } else if (arg) {
           const pl = this.appStore.getPlaylists().find((p) => p.name.toLowerCase().includes(arg.toLowerCase()));
           if (pl) {
             const file = this.appStore.exportPlaylist(pl.id, outDir);
-            if (file) process.title = `Exported: ${file}`;
+            if (file) this.appStore.showToast(`Exported: ${file}`, 'success');
           }
         }
         break;
@@ -335,9 +335,9 @@ export class CommandPalette {
         if (arg) {
           try {
             const result = this.appStore.importPlaylistFromM3U(arg);
-            process.title = `Imported: ${result.added} tracks (${result.unmatched} unmatched)`;
+            this.appStore.showToast(`Imported: ${result.added} tracks (${result.unmatched} unmatched)`, 'success');
           } catch {
-            process.title = `Import failed: ${arg}`;
+            this.appStore.showToast(`Import failed: ${arg}`, 'error');
           }
         }
         break;

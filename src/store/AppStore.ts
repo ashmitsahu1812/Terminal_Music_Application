@@ -150,6 +150,7 @@ export class AppStore extends EventEmitter {
 
   public addToQueue(track: Track): void {
     this.queue.push(track);
+    this.showToast(`Added to Queue: ${track.title}`, 'info');
     this.emit('updated');
   }
 
@@ -476,6 +477,12 @@ export class AppStore extends EventEmitter {
     }
     this.storageManager.saveLibraryTracks(this.tracks);
     this.emit('updated');
+  }
+
+  // ── Toasts ────────────────────────────────────────────────────────────
+
+  public showToast(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info', durationMs = 3000): void {
+    this.emit('toast', { message, type, durationMs });
   }
 
   // ── M3U Import / Export ──────────────────────────────────────────────

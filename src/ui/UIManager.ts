@@ -14,6 +14,7 @@ import { StatsView } from './StatsView.js';
 import { SmartPlaylistView } from './SmartPlaylistView.js';
 import { MiniPlayerView } from './MiniPlayerView.js';
 import { KeybindingsView } from './KeybindingsView.js';
+import { ToastManager, ToastConfig } from './ToastManager.js';
 import { CommandPalette } from './CommandPalette.js';
 import { ShortcutsBar } from './ShortcutsBar.js';
 import { getTheme } from './Theme.js';
@@ -40,6 +41,7 @@ export class UIManager {
   private smartPlaylistView: SmartPlaylistView;
   private miniPlayerView: MiniPlayerView;
   private keybindingsView: KeybindingsView;
+  private toastManager: ToastManager;
 
   private tabBoxes: Record<ViewTab, blessed.Widgets.BoxElement>;
 
@@ -109,6 +111,11 @@ export class UIManager {
 
     this.appStore.on('theme-changed', () => {
       this.applyTheme();
+    });
+
+    this.toastManager = new ToastManager(this.screen, () => this.appStore.getConfig().theme);
+    this.appStore.on('toast', (config: ToastConfig) => {
+      this.toastManager.show(config);
     });
 
     // Handle terminal resize (SIGWINCH) gracefully
