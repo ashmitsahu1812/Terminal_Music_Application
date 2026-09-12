@@ -311,6 +311,11 @@ export class CommandPalette {
         this.appStore.setActiveTab('stats');
         break;
       }
+      case 'smart':
+      case 'generate': {
+        this.appStore.setActiveTab('smart');
+        break;
+      }
       case 'q':
       case 'quit': {
         process.exit(0);

@@ -11,6 +11,7 @@ import { LyricsView } from './LyricsView.js';
 import { RadioView } from './RadioView.js';
 import { EqualizerView } from './EqualizerView.js';
 import { StatsView } from './StatsView.js';
+import { SmartPlaylistView } from './SmartPlaylistView.js';
 import { CommandPalette } from './CommandPalette.js';
 import { ShortcutsBar } from './ShortcutsBar.js';
 import { getTheme } from './Theme.js';
@@ -34,6 +35,7 @@ export class UIManager {
   private radioView: RadioView;
   private equalizerView: EqualizerView;
   private statsView: StatsView;
+  private smartPlaylistView: SmartPlaylistView;
 
   private tabBoxes: Record<ViewTab, blessed.Widgets.BoxElement>;
 
@@ -76,6 +78,7 @@ export class UIManager {
       radio: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       equalizer: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       stats: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
+      smart: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
     };
 
     // Instantiate views inside container boxes
@@ -88,6 +91,7 @@ export class UIManager {
     this.radioView = new RadioView(this.tabBoxes.radio, this.appStore);
     this.equalizerView = new EqualizerView(this.tabBoxes.equalizer, this.appStore);
     this.statsView = new StatsView(this.tabBoxes.stats, this.appStore);
+    this.smartPlaylistView = new SmartPlaylistView(this.tabBoxes.smart, this.appStore);
 
     this.setupGlobalKeybindings();
 
@@ -147,6 +151,9 @@ export class UIManager {
       case 'stats':
         this.statsView.focus();
         break;
+      case 'smart':
+        this.smartPlaylistView.focus();
+        break;
     }
   }
 
@@ -164,6 +171,7 @@ export class UIManager {
     this.radioView.updateTheme();
     this.equalizerView.updateTheme();
     this.statsView.updateTheme();
+    this.smartPlaylistView.updateTheme();
     this.screen.render();
   }
 
@@ -270,6 +278,7 @@ export class UIManager {
     this.screen.key(['7'], () => this.appStore.setActiveTab('radio'));
     this.screen.key(['8'], () => this.appStore.setActiveTab('equalizer'));
     this.screen.key(['9'], () => this.appStore.setActiveTab('stats'));
+    this.screen.key(['0'], () => this.appStore.setActiveTab('smart'));
 
     // Command palette and search triggers: : and /
     this.screen.key([':'], () => {

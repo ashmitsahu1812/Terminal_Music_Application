@@ -10,6 +10,7 @@ import { LyricsEngine } from '../src/lyrics/LyricsEngine.js';
 import { LyricsCacheManager } from '../src/lyrics/LyricsCacheManager.js';
 import { RadioManager } from '../src/radio/RadioManager.js';
 import { StatsManager } from '../src/stats/StatsManager.js';
+import { SmartPlaylistEngine } from '../src/playlist/SmartPlaylistEngine.js';
 import { getTheme } from '../src/ui/Theme.js';
 import { Track } from '../src/types/index.js';
 
@@ -341,6 +342,41 @@ async function runTests() {
   assert.strictEqual(cleared.uniqueTracksPlayed, 0);
   fs.rmSync(testDir2, { recursive: true, force: true });
   console.log('  ✓ Play history recording, top tracks ranking, duration formatting, and clear verified.');
+
+  // Test 15: Smart Playlist Engine – Rule-Based Auto-Generation
+  console.log('1⃣⃣5⃣ Testing Smart Playlist Engine...');
+  const sampleTracks: Track[] = [
+    { id: 'sp-1', filePath: '/a.mp3', fileName: 'a.mp3', title: 'Electric Dreams', artist: 'Synth Co', album: 'Neon', genre: 'Electronic', duration: 240, format: 'mp3', addedAt: new Date().toISOString(), year: 2020 },
+    { id: 'sp-2', filePath: '/b.mp3', fileName: 'b.mp3', title: 'Rainy Cafe', artist: 'LoFi Guy', album: 'Chill', genre: 'Lo-Fi', duration: 120, format: 'mp3', addedAt: new Date().toISOString(), year: 1998 },
+    { id: 'sp-3', filePath: '/c.mp3', fileName: 'c.mp3', title: 'Piano Sonata', artist: 'Mozart', album: 'Classical', genre: 'Classical', duration: 600, format: 'mp3', addedAt: new Date().toISOString(), year: 1785 },
+    { id: 'sp-4', filePath: '/d.mp3', fileName: 'd.mp3', title: 'Heavy Riff', artist: 'Rock Band', album: 'Loud', genre: 'Rock', duration: 200, format: 'mp3', addedAt: new Date().toISOString(), year: 2005 },
+    { id: 'sp-5', filePath: '/e.mp3', fileName: 'e.mp3', title: 'Ambient Rain', artist: 'Sleep Aid', album: 'Rest', genre: 'Ambient', duration: 1800, format: 'mp3', addedAt: new Date().toISOString() },
+  ];
+  // Genre filter
+  const electronic = SmartPlaylistEngine.generate(sampleTracks, { name: 'Electronic', rules: [{ type: 'genre', value: 'Electronic' }] });
+  assert.strictEqual(electronic.length, 1);
+  assert.strictEqual(electronic[0].id, 'sp-1');
+  // Decade filter
+  const nineties = SmartPlaylistEngine.generate(sampleTracks, { name: '90s', rules: [{ type: 'decade', value: 1990 }] });
+  assert.strictEqual(nineties.length, 1);
+  assert.strictEqual(nineties[0].id, 'sp-2');
+  // Mood: chill (lo-fi)
+  const chill = SmartPlaylistEngine.generate(sampleTracks, { name: 'Chill', rules: [{ type: 'mood', value: 'chill' }] });
+  assert.ok(chill.some((t) => t.id === 'sp-2'), 'Chill should include LoFi track');
+  // Mood: focus (classical)
+  const focus = SmartPlaylistEngine.generate(sampleTracks, { name: 'Focus', rules: [{ type: 'mood', value: 'focus' }] });
+  assert.ok(focus.some((t) => t.id === 'sp-3'), 'Focus should include Classical track');
+  // Duration max (< 3 minutes = 180s)
+  const short = SmartPlaylistEngine.generate(sampleTracks, { name: 'Short', rules: [{ type: 'duration_max', seconds: 180 }] });
+  assert.ok(short.every((t) => t.duration <= 180), 'All short tracks should be <= 180s');
+  // toPlaylist conversion
+  const pl2 = SmartPlaylistEngine.toPlaylist(electronic, 'Test Electronic');
+  assert.strictEqual(pl2.trackIds.length, 1);
+  assert.strictEqual(pl2.name, 'Test Electronic');
+  // Presets exist
+  const preset2 = SmartPlaylistEngine.getPresets();
+  assert.ok(preset2.length >= 6, 'Should have at least 6 preset configs');
+  console.log('  ✓ Genre, decade, mood, duration, and playlist conversion rules verified.');
 
   console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY!');
   process.exit(0);

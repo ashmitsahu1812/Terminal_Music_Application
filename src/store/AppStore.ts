@@ -456,4 +456,18 @@ export class AppStore extends EventEmitter {
   public getStatsManager(): StatsManager {
     return this.statsManager;
   }
+
+  public saveSmartPlaylist(playlist: Playlist, tracks: Track[]): void {
+    // Add to playlists list
+    this.playlists.push(playlist);
+    this.storageManager.savePlaylists(this.playlists);
+    // Add any tracks not already in library
+    for (const track of tracks) {
+      if (!this.tracks.some((t) => t.id === track.id)) {
+        this.tracks.push(track);
+      }
+    }
+    this.storageManager.saveLibraryTracks(this.tracks);
+    this.emit('updated');
+  }
 }
