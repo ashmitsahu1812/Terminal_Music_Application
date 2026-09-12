@@ -6,12 +6,14 @@ import { StorageManager } from '../storage/StorageManager.js';
 import { AmbientSoundManager } from '../audio/AmbientSoundManager.js';
 import { DiscordRPC } from '../integrations/DiscordRPC.js';
 import { RadioManager } from '../radio/RadioManager.js';
+import { LyricsCacheManager } from '../lyrics/LyricsCacheManager.js';
 
 export class AppStore extends EventEmitter {
   private audioEngine: AudioEngine;
   private storageManager: StorageManager;
   private ambientManager: AmbientSoundManager;
   private radioManager: RadioManager;
+  private lyricsCacheManager: LyricsCacheManager;
   private discordRpc: DiscordRPC | null = null;
 
   private tracks: Track[] = [];
@@ -38,6 +40,7 @@ export class AppStore extends EventEmitter {
 
     this.ambientManager = new AmbientSoundManager(this);
     this.radioManager = new RadioManager();
+    this.lyricsCacheManager = new LyricsCacheManager();
 
     // Sync Audio Engine settings from persisted config
     this.audioEngine.setVolume(this.config.volume);
@@ -400,5 +403,9 @@ export class AppStore extends EventEmitter {
 
   public getRadioManager(): RadioManager {
     return this.radioManager;
+  }
+
+  public getLyricsCacheManager(): LyricsCacheManager {
+    return this.lyricsCacheManager;
   }
 }

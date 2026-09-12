@@ -143,6 +143,27 @@ export class CommandPalette {
         }
         break;
       }
+      case 'lyrics': {
+        const sub = arg.toLowerCase().trim();
+        if (sub === 'clear') {
+          this.appStore.getLyricsCacheManager().clearCache();
+        } else if (sub === 'fetch' || sub === 'reload') {
+          const currentTrack = this.appStore.getAudioEngine().getState().currentTrack;
+          if (currentTrack) {
+            currentTrack.lyrics = undefined;
+            this.appStore.getLyricsCacheManager().getLyricsForTrack(currentTrack).then((lyrics) => {
+              if (lyrics) {
+                currentTrack.lyrics = lyrics;
+                this.appStore.emit('updated');
+              }
+            });
+          }
+          this.appStore.setActiveTab('lyrics');
+        } else {
+          this.appStore.setActiveTab('lyrics');
+        }
+        break;
+      }
       case 'speed': {
         const val = parseFloat(arg);
         if (!isNaN(val)) {

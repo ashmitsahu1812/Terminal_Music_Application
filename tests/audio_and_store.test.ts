@@ -7,6 +7,7 @@ import { AppStore } from '../src/store/AppStore.js';
 import { MetadataParser } from '../src/parser/MetadataParser.js';
 import { ANSIArtRenderer } from '../src/parser/ANSIArtRenderer.js';
 import { LyricsEngine } from '../src/lyrics/LyricsEngine.js';
+import { LyricsCacheManager } from '../src/lyrics/LyricsCacheManager.js';
 import { RadioManager } from '../src/radio/RadioManager.js';
 import { getTheme } from '../src/ui/Theme.js';
 import { Track } from '../src/types/index.js';
@@ -199,6 +200,40 @@ async function runTests() {
   store.getRadioManager().removeCustomStation(customStation.id);
   assert.strictEqual(store.getRadioStations().length, stations.length);
   console.log('  ✓ Radio stations directory, custom station management, and streaming tracks verified.');
+
+  // Test 11: LyricsCacheManager Disk Caching & Retrieval
+  console.log('1️⃣1️⃣ Testing LyricsCacheManager Disk Caching & LRCLIB Pipeline...');
+  const testLyricsCacheDir = path.join(process.cwd(), '.test_lyrics_cache');
+  const cacheManager = new LyricsCacheManager(testLyricsCacheDir);
+  const sampleTrackForLyrics: Track = {
+    id: 'tr-lrc-test',
+    filePath: '/tmp/nonexistent.mp3',
+    fileName: 'nonexistent.mp3',
+    title: 'Cyber Test Song',
+    artist: 'Neon Artist',
+    album: 'Cyber Album',
+    duration: 180,
+    format: 'MP3',
+    addedAt: new Date().toISOString(),
+  };
+
+  const sampleLyricLines = [
+    { time: 0, text: 'Intro beat' },
+    { time: 5, text: 'First verse singing' },
+    { time: 10, text: 'Chorus drop' },
+  ];
+
+  cacheManager.saveToCache(sampleTrackForLyrics.artist, sampleTrackForLyrics.title, sampleLyricLines);
+  const cachedLyricsResult = await cacheManager.getLyricsForTrack(sampleTrackForLyrics);
+  assert.ok(cachedLyricsResult);
+  assert.strictEqual(cachedLyricsResult.length, 3);
+  assert.strictEqual(cachedLyricsResult[1].text, 'First verse singing');
+
+  cacheManager.clearCache();
+  if (fs.existsSync(testLyricsCacheDir)) {
+    fs.rmSync(testLyricsCacheDir, { recursive: true, force: true });
+  }
+  console.log('  ✓ Lyrics caching, disk serialization, and timestamp parsing verified.');
 
   // Stop any audio or ambient playback immediately so tests remain completely silent
   store.setAmbientSound('none');

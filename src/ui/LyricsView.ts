@@ -69,24 +69,13 @@ export class LyricsView {
     // Check memory cache
     if (this.cachedLyrics.has(track.id)) return;
 
-    // 1. Try local .lrc file
-    const local = LyricsEngine.loadLocalLyrics(track.filePath);
-    if (local && local.length > 0) {
-      this.cachedLyrics.set(track.id, local);
-      track.lyrics = local;
-      this.box.setContent(this.renderLyrics());
-      if (this.box.screen) this.box.screen.render();
-      return;
-    }
-
-    // 2. Try online LRCLIB fetch
     if (!this.isFetching) {
       this.isFetching = true;
       try {
-        const online = await LyricsEngine.fetchOnlineLyrics(track.title, track.artist, track.duration);
-        if (online && online.length > 0) {
-          this.cachedLyrics.set(track.id, online);
-          track.lyrics = online;
+        const lyrics = await this.appStore.getLyricsCacheManager().getLyricsForTrack(track);
+        if (lyrics && lyrics.length > 0) {
+          this.cachedLyrics.set(track.id, lyrics);
+          track.lyrics = lyrics;
           this.box.setContent(this.renderLyrics());
           if (this.box.screen) this.box.screen.render();
         }
