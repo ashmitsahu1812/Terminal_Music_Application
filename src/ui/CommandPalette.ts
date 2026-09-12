@@ -316,6 +316,32 @@ export class CommandPalette {
         this.appStore.setActiveTab('smart');
         break;
       }
+      case 'export': {
+        const sub = parts[1]?.toLowerCase();
+        const outDir = parts[2] || (process.env.HOME + '/Music/Playlists');
+        if (sub === 'all') {
+          const files = this.appStore.exportAllPlaylists(outDir);
+          process.title = `Exported ${files.length} playlists to ${outDir}`;
+        } else if (arg) {
+          const pl = this.appStore.getPlaylists().find((p) => p.name.toLowerCase().includes(arg.toLowerCase()));
+          if (pl) {
+            const file = this.appStore.exportPlaylist(pl.id, outDir);
+            if (file) process.title = `Exported: ${file}`;
+          }
+        }
+        break;
+      }
+      case 'import': {
+        if (arg) {
+          try {
+            const result = this.appStore.importPlaylistFromM3U(arg);
+            process.title = `Imported: ${result.added} tracks (${result.unmatched} unmatched)`;
+          } catch {
+            process.title = `Import failed: ${arg}`;
+          }
+        }
+        break;
+      }
       case 'q':
       case 'quit': {
         process.exit(0);

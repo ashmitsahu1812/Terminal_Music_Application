@@ -11,6 +11,7 @@ import { LyricsCacheManager } from '../src/lyrics/LyricsCacheManager.js';
 import { RadioManager } from '../src/radio/RadioManager.js';
 import { StatsManager } from '../src/stats/StatsManager.js';
 import { SmartPlaylistEngine } from '../src/playlist/SmartPlaylistEngine.js';
+import { PlaylistIO } from '../src/io/PlaylistIO.js';
 import { getTheme } from '../src/ui/Theme.js';
 import { Track } from '../src/types/index.js';
 
@@ -377,6 +378,41 @@ async function runTests() {
   const preset2 = SmartPlaylistEngine.getPresets();
   assert.ok(preset2.length >= 6, 'Should have at least 6 preset configs');
   console.log('  ✓ Genre, decade, mood, duration, and playlist conversion rules verified.');
+
+  // Test 16: PlaylistIO (M3U Import/Export)
+  console.log('1⃣⃣6⃣ Testing PlaylistIO M3U Import/Export...');
+  const ioDir = path.join(process.cwd(), '.test_m3u_' + Date.now());
+  fs.mkdirSync(ioDir, { recursive: true });
+  
+  const testTracks: Track[] = [
+    { id: 'io-1', filePath: '/tmp/track1.mp3', fileName: 'track1.mp3', title: 'Song One', artist: 'Artist A', duration: 120, addedAt: new Date().toISOString() },
+    { id: 'io-2', filePath: '/tmp/track2.mp3', fileName: 'track2.mp3', title: 'Song Two', artist: 'Artist B', duration: 180, addedAt: new Date().toISOString() }
+  ];
+  const testPl: Playlist = {
+    id: 'pl-io-test', name: 'My Exported List', description: 'Test', trackIds: ['io-1', 'io-2'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+  };
+
+  // Export
+  const outPath = PlaylistIO.exportM3U(testPl, testTracks, ioDir);
+  assert.ok(fs.existsSync(outPath), 'M3U file should be created');
+  const m3uContent = fs.readFileSync(outPath, 'utf-8');
+  assert.ok(m3uContent.includes('#EXTM3U'), 'Should have EXTM3U header');
+  assert.ok(m3uContent.includes('#PLAYLIST:My Exported List'), 'Should have PLAYLIST tag');
+  assert.ok(m3uContent.includes('/tmp/track1.mp3'), 'Should contain track paths');
+  assert.ok(m3uContent.includes('#EXTINF:120,Artist A - Song One'), 'Should contain EXTM3U metadata');
+
+  // Import
+  const imported = PlaylistIO.importM3U(outPath);
+  assert.strictEqual(imported.playlist.name, 'My Exported List', 'Should parse playlist name');
+  assert.strictEqual(imported.trackPaths.length, 2, 'Should parse 2 track paths');
+  assert.strictEqual(imported.trackPaths[0], '/tmp/track1.mp3', 'Should parse correct path');
+
+  // Preview
+  const previewStr = PlaylistIO.previewImport(outPath);
+  assert.ok(previewStr.includes('My Exported List'), 'Preview should contain playlist name');
+  
+  fs.rmSync(ioDir, { recursive: true, force: true });
+  console.log('  ✓ M3U export, EXTM3U tags, and import parsing verified.');
 
   console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY!');
   process.exit(0);

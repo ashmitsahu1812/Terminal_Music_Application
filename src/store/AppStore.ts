@@ -10,6 +10,7 @@ import { LyricsCacheManager } from '../lyrics/LyricsCacheManager.js';
 import { TimerManager } from '../timer/TimerManager.js';
 import { EqualizerManager } from '../audio/EqualizerManager.js';
 import { StatsManager } from '../stats/StatsManager.js';
+import { PlaylistIO } from '../io/PlaylistIO.js';
 
 export class AppStore extends EventEmitter {
   private audioEngine: AudioEngine;
@@ -469,5 +470,30 @@ export class AppStore extends EventEmitter {
     }
     this.storageManager.saveLibraryTracks(this.tracks);
     this.emit('updated');
+  }
+
+  // ── M3U Import / Export ──────────────────────────────────────────────
+
+  public exportPlaylist(playlistId: string, outputDir: string): string | null {
+    const pl = this.playlists.find((p) => p.id === playlistId);
+    if (!pl) return null;
+    return PlaylistIO.exportM3U(pl, this.tracks, outputDir);
+  }
+
+  public exportAllPlaylists(outputDir: string): string[] {
+    return PlaylistIO.exportAll(this.playlists, this.tracks, outputDir);
+  }
+
+  public importPlaylistFromM3U(filePath: string): { added: number; unmatched: number } {
+    const { playlist, trackPaths } = PlaylistIO.importM3U(filePath);
+    const { matched, unmatched } = PlaylistIO.resolveImportedPaths(trackPaths, this.tracks);
+    const importedPlaylist: Playlist = {
+      ...playlist,
+      trackIds: matched.map((t) => t.id),
+    };
+    this.playlists.push(importedPlaylist);
+    this.storageManager.savePlaylists(this.playlists);
+    this.emit('updated');
+    return { added: matched.length, unmatched: unmatched.length };
   }
 }
