@@ -12,6 +12,7 @@ import { RadioView } from './RadioView.js';
 import { EqualizerView } from './EqualizerView.js';
 import { StatsView } from './StatsView.js';
 import { SmartPlaylistView } from './SmartPlaylistView.js';
+import { MiniPlayerView } from './MiniPlayerView.js';
 import { CommandPalette } from './CommandPalette.js';
 import { ShortcutsBar } from './ShortcutsBar.js';
 import { getTheme } from './Theme.js';
@@ -36,6 +37,7 @@ export class UIManager {
   private equalizerView: EqualizerView;
   private statsView: StatsView;
   private smartPlaylistView: SmartPlaylistView;
+  private miniPlayerView: MiniPlayerView;
 
   private tabBoxes: Record<ViewTab, blessed.Widgets.BoxElement>;
 
@@ -92,6 +94,7 @@ export class UIManager {
     this.equalizerView = new EqualizerView(this.tabBoxes.equalizer, this.appStore);
     this.statsView = new StatsView(this.tabBoxes.stats, this.appStore);
     this.smartPlaylistView = new SmartPlaylistView(this.tabBoxes.smart, this.appStore);
+    this.miniPlayerView = new MiniPlayerView(this.screen, this.appStore);
 
     this.setupGlobalKeybindings();
 
@@ -172,6 +175,7 @@ export class UIManager {
     this.equalizerView.updateTheme();
     this.statsView.updateTheme();
     this.smartPlaylistView.updateTheme();
+    this.miniPlayerView.updateTheme();
     this.screen.render();
   }
 
@@ -263,6 +267,11 @@ export class UIManager {
       this.appStore.cycleLoopMode();
     });
 
+    this.screen.key(['n'], () => {
+      if (this.commandPalette.isVisible()) return;
+      this.miniPlayerView.toggle();
+    });
+
     this.screen.key(['s'], () => {
       if (this.commandPalette.isVisible()) return;
       this.appStore.toggleShuffle();
@@ -299,6 +308,10 @@ export class UIManager {
         }
       }
     });
+  }
+
+  public toggleMiniPlayer(): void {
+    this.miniPlayerView.toggle();
   }
 
   private cleanupAndExit(): void {
