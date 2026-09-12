@@ -9,6 +9,7 @@ import { RadioManager } from '../radio/RadioManager.js';
 import { LyricsCacheManager } from '../lyrics/LyricsCacheManager.js';
 import { TimerManager } from '../timer/TimerManager.js';
 import { EqualizerManager } from '../audio/EqualizerManager.js';
+import { StatsManager } from '../stats/StatsManager.js';
 
 export class AppStore extends EventEmitter {
   private audioEngine: AudioEngine;
@@ -18,6 +19,7 @@ export class AppStore extends EventEmitter {
   private lyricsCacheManager: LyricsCacheManager;
   private timerManager: TimerManager;
   private equalizerManager: EqualizerManager;
+  private statsManager: StatsManager;
   private discordRpc: DiscordRPC | null = null;
 
   private tracks: Track[] = [];
@@ -50,6 +52,7 @@ export class AppStore extends EventEmitter {
       this.config.eqPreset || 'flat',
       this.config.eqBands,
     );
+    this.statsManager = new StatsManager(this.storageManager.getConfigDir());
 
     this.timerManager.on('tick', () => {
       this.emit('timer-tick');
@@ -78,6 +81,7 @@ export class AppStore extends EventEmitter {
 
     // Listen to Audio Engine events
     this.audioEngine.on('track-ended', (endedTrack: Track | null) => {
+      if (endedTrack) this.statsManager.endSession();
       this.handleTrackEnded(endedTrack);
     });
 
@@ -152,8 +156,10 @@ export class AppStore extends EventEmitter {
     const currentState = this.audioEngine.getState();
     if (currentState.currentTrack) {
       this.history.push(currentState.currentTrack);
+      this.statsManager.endSession();
     }
     this.audioEngine.play(track);
+    this.statsManager.startSession(track.id, track.title, track.artist, track.album, track.filePath);
     this.emit('updated');
   }
 
@@ -445,5 +451,9 @@ export class AppStore extends EventEmitter {
 
   public getTimerManager(): TimerManager {
     return this.timerManager;
+  }
+
+  public getStatsManager(): StatsManager {
+    return this.statsManager;
   }
 }

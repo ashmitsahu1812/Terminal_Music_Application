@@ -9,6 +9,7 @@ import { ANSIArtRenderer } from '../src/parser/ANSIArtRenderer.js';
 import { LyricsEngine } from '../src/lyrics/LyricsEngine.js';
 import { LyricsCacheManager } from '../src/lyrics/LyricsCacheManager.js';
 import { RadioManager } from '../src/radio/RadioManager.js';
+import { StatsManager } from '../src/stats/StatsManager.js';
 import { getTheme } from '../src/ui/Theme.js';
 import { Track } from '../src/types/index.js';
 
@@ -312,6 +313,34 @@ async function runTests() {
   const presets = eq.getPresetList();
   assert.strictEqual(presets.length, 9, 'Should have 9 EQ presets');
   console.log('  ✓ Equalizer bands, presets, gain clamping, and FFmpeg filter generation verified.');
+
+  // Test 14: StatsManager Listening History & Analytics
+  console.log('1⃣⃣4⃣ Testing StatsManager Play History & Listening Analytics...');
+  const testDir2 = path.join(process.cwd(), '.test_stats_' + Date.now());
+  fs.mkdirSync(testDir2, { recursive: true });
+  const sm = new StatsManager(testDir2);
+  // Record play sessions
+  sm.startSession('tk-1', 'Song A', 'Artist 1', 'Album 1', '/tmp/a.mp3');
+  await new Promise((r) => setTimeout(r, 50));
+  sm.endSession();
+  sm.startSession('tk-2', 'Song B', 'Artist 2', 'Album 2', '/tmp/b.mp3');
+  sm.endSession();
+  sm.startSession('tk-1', 'Song A', 'Artist 1', 'Album 1', '/tmp/a.mp3');
+  sm.endSession();
+  const stats2 = sm.getStats();
+  assert.strictEqual(stats2.uniqueTracksPlayed, 2, 'Should have 2 unique tracks');
+  assert.strictEqual(stats2.totalTrackPlays, 3, 'Should have 3 total plays');
+  assert.strictEqual(stats2.topTracks[0].trackId, 'tk-1', 'Most played should be Song A');
+  assert.strictEqual(stats2.topTracks[0].playCount, 2, 'Song A play count should be 2');
+  assert.strictEqual(sm.formatDuration(0), '0s');
+  assert.strictEqual(sm.formatDuration(65), '1m 5s');
+  assert.strictEqual(sm.formatDuration(3661), '1h 1m');
+  sm.clearStats();
+  const cleared = sm.getStats();
+  assert.strictEqual(cleared.totalTrackPlays, 0, 'Stats should be cleared after clearStats()');
+  assert.strictEqual(cleared.uniqueTracksPlayed, 0);
+  fs.rmSync(testDir2, { recursive: true, force: true });
+  console.log('  ✓ Play history recording, top tracks ranking, duration formatting, and clear verified.');
 
   console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY!');
   process.exit(0);

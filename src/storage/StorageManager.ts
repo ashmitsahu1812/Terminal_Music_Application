@@ -51,6 +51,10 @@ export class StorageManager {
     }
   }
 
+  public getConfigDir(): string {
+    return this.configDir;
+  }
+
   public loadConfig(): AppConfig {
     try {
       if (fs.existsSync(this.configFile)) {

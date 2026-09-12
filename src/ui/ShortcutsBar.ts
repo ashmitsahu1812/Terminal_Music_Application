@@ -54,10 +54,12 @@ export class ShortcutsBar {
       tabInfo = '📡 [Enter] Stream Radio Station';
     } else if (activeTab === 'equalizer') {
       tabInfo = '🎛 [←/→] Band  [↑/↓] ±1dB  [f/b/t/r…] Preset';
+    } else if (activeTab === 'stats') {
+      tabInfo = '📊 Listening Analytics  [r] Refresh  [:stats clear] Reset';
     } else {
       tabInfo = '24-bit ANSI Art';
     }
 
-    return ` {bold}[Space]{/bold} Play/Pause │ {bold}[1-8]{/bold} Tabs │ {bold}[[/]]{/bold} Speed │ {bold}[v]{/bold} Vis │ {bold}[w]{/bold} Ambient │ {bold}[/]{/bold} Search │ {bold}[:]{/bold} Cmd │ ${tabInfo}`;
+    return ` {bold}[Space]{/bold} Play/Pause │ {bold}[1-9]{/bold} Tabs │ {bold}[[/]]{/bold} Speed │ {bold}[v]{/bold} Vis │ {bold}[w]{/bold} Ambient │ {bold}[/]{/bold} Search │ {bold}[:]{/bold} Cmd │ ${tabInfo}`;
   }
 }

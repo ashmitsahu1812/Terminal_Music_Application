@@ -302,6 +302,15 @@ export class CommandPalette {
         }
         break;
       }
+      case 'stats':
+      case 'analytics': {
+        const sub = parts[1]?.toLowerCase();
+        if (sub === 'clear') {
+          this.appStore.getStatsManager().clearStats();
+        }
+        this.appStore.setActiveTab('stats');
+        break;
+      }
       case 'q':
       case 'quit': {
         process.exit(0);

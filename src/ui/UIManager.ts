@@ -10,6 +10,7 @@ import { AlbumArtView } from './AlbumArtView.js';
 import { LyricsView } from './LyricsView.js';
 import { RadioView } from './RadioView.js';
 import { EqualizerView } from './EqualizerView.js';
+import { StatsView } from './StatsView.js';
 import { CommandPalette } from './CommandPalette.js';
 import { ShortcutsBar } from './ShortcutsBar.js';
 import { getTheme } from './Theme.js';
@@ -32,6 +33,7 @@ export class UIManager {
   private lyricsView: LyricsView;
   private radioView: RadioView;
   private equalizerView: EqualizerView;
+  private statsView: StatsView;
 
   private tabBoxes: Record<ViewTab, blessed.Widgets.BoxElement>;
 
@@ -73,6 +75,7 @@ export class UIManager {
       lyrics: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       radio: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       equalizer: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
+      stats: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
     };
 
     // Instantiate views inside container boxes
@@ -84,6 +87,7 @@ export class UIManager {
     this.lyricsView = new LyricsView(this.tabBoxes.lyrics, this.appStore);
     this.radioView = new RadioView(this.tabBoxes.radio, this.appStore);
     this.equalizerView = new EqualizerView(this.tabBoxes.equalizer, this.appStore);
+    this.statsView = new StatsView(this.tabBoxes.stats, this.appStore);
 
     this.setupGlobalKeybindings();
 
@@ -140,6 +144,9 @@ export class UIManager {
       case 'equalizer':
         this.equalizerView.focus();
         break;
+      case 'stats':
+        this.statsView.focus();
+        break;
     }
   }
 
@@ -156,6 +163,7 @@ export class UIManager {
     this.lyricsView.updateTheme();
     this.radioView.updateTheme();
     this.equalizerView.updateTheme();
+    this.statsView.updateTheme();
     this.screen.render();
   }
 
@@ -261,6 +269,7 @@ export class UIManager {
     this.screen.key(['6'], () => this.appStore.setActiveTab('lyrics'));
     this.screen.key(['7'], () => this.appStore.setActiveTab('radio'));
     this.screen.key(['8'], () => this.appStore.setActiveTab('equalizer'));
+    this.screen.key(['9'], () => this.appStore.setActiveTab('stats'));
 
     // Command palette and search triggers: : and /
     this.screen.key([':'], () => {
