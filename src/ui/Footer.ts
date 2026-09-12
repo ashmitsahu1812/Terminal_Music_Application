@@ -64,7 +64,7 @@ export class FooterComponent {
 
     const posStr = this.formatTime(state.position);
     const durStr = this.formatTime(state.duration);
-    const progressBar = this.makeProgressBar(state.position, state.duration, 26);
+    const progressBar = this.makeProgressBar(state.position, state.duration, 24);
 
     const volStr = state.isMuted
       ? '{red-fg}MUTE{/red-fg}'
@@ -81,7 +81,9 @@ export class FooterComponent {
         ? '{cyan-fg}🔁 QUEUE{/cyan-fg}'
         : '🔁 OFF';
 
-    return ` ${statusText} │ ${titleStr}\n ${progressBar} [${posStr} / ${durStr}] │ Vol: ${volStr} │ ${shuffleStr} │ ${loopStr}`;
+    const speedStr = state.speed !== 1.0 ? ` │ {yellow-fg}${state.speed}x{/yellow-fg}` : '';
+
+    return ` ${statusText} │ ${titleStr}\n ${progressBar} [${posStr} / ${durStr}] │ Vol: ${volStr}${speedStr} │ ${shuffleStr} │ ${loopStr}`;
   }
 
   private makeProgressBar(pos: number, dur: number, width: number): string {

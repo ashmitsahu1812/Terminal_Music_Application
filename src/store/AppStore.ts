@@ -1,12 +1,17 @@
 import { EventEmitter } from 'events';
 import Fuse from 'fuse.js';
-import { Track, Playlist, AppConfig, LoopMode, ViewTab } from '../types/index.js';
+import { Track, Playlist, AppConfig, LoopMode, ViewTab, VisualizerMode, AmbientSoundType, EQPreset } from '../types/index.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { StorageManager } from '../storage/StorageManager.js';
+import { AmbientSoundManager } from '../audio/AmbientSoundManager.js';
+import { DiscordRPC } from '../integrations/DiscordRPC.js';
 
 export class AppStore extends EventEmitter {
   private audioEngine: AudioEngine;
   private storageManager: StorageManager;
+  private ambientManager: AmbientSoundManager;
+  private discordRpc: DiscordRPC | null = null;
+
   private tracks: Track[] = [];
   private filteredTracks: Track[] = [];
   private queue: Track[] = [];
@@ -29,11 +34,22 @@ export class AppStore extends EventEmitter {
     this.filteredTracks = [...this.tracks];
     this.initFuse();
 
+    this.ambientManager = new AmbientSoundManager(this);
+
     // Sync Audio Engine settings from persisted config
     this.audioEngine.setVolume(this.config.volume);
     this.audioEngine.setLoopMode(this.config.loopMode);
     this.audioEngine.setShuffle(this.config.isShuffle);
+    this.audioEngine.setSpeed(this.config.speed || 1.0);
+    this.audioEngine.setVisualizerMode(this.config.visualizerMode || 'bars');
     this.isShuffled = this.config.isShuffle;
+
+    // Initialize Discord RPC
+    if (this.config.discordRpcEnabled) {
+      try {
+        this.discordRpc = new DiscordRPC(this);
+      } catch {}
+    }
 
     // Listen to Audio Engine events
     this.audioEngine.on('track-ended', (endedTrack: Track | null) => {
@@ -205,7 +221,6 @@ export class AppStore extends EventEmitter {
   public previousTrack(): void {
     const state = this.audioEngine.getState();
 
-    // If played more than 3 seconds, restart current track
     if (state.position > 3 && state.currentTrack) {
       this.audioEngine.play(state.currentTrack);
       return;
@@ -287,6 +302,62 @@ export class AppStore extends EventEmitter {
     this.emit('updated');
   }
 
+  // DJ Speed and Effects Controls
+  public setSpeed(speed: number): void {
+    this.config.speed = speed;
+    this.storageManager.saveConfig(this.config);
+    this.audioEngine.setSpeed(speed);
+    this.emit('updated');
+  }
+
+  public cycleSpeed(): number {
+    const speeds = [0.75, 0.8, 1.0, 1.25, 1.5, 2.0];
+    const current = this.audioEngine.getState().speed;
+    const next = speeds.find((s) => s > current + 0.05) || speeds[0];
+    this.setSpeed(next);
+    return next;
+  }
+
+  public setNightcore(): void {
+    this.setSpeed(1.25);
+  }
+
+  public setVaporwave(): void {
+    this.setSpeed(0.8);
+  }
+
+  public setEQPreset(preset: EQPreset): void {
+    this.config.eqPreset = preset;
+    this.storageManager.saveConfig(this.config);
+    this.audioEngine.setEQPreset(preset);
+    this.emit('updated');
+  }
+
+  // Ambient Sound Manager
+  public setAmbientSound(ambient: AmbientSoundType): void {
+    this.config.ambientSound = ambient;
+    this.storageManager.saveConfig(this.config);
+    this.ambientManager.setAmbient(ambient);
+    this.emit('updated');
+  }
+
+  public cycleAmbientSound(): AmbientSoundType {
+    const next = this.ambientManager.cycleAmbient();
+    this.config.ambientSound = next;
+    this.storageManager.saveConfig(this.config);
+    this.emit('updated');
+    return next;
+  }
+
+  // Visualizer Mode
+  public cycleVisualizerMode(): VisualizerMode {
+    const next = this.audioEngine.cycleVisualizerMode();
+    this.config.visualizerMode = next;
+    this.storageManager.saveConfig(this.config);
+    this.emit('updated');
+    return next;
+  }
+
   // Config & Audio Getters
   public getConfig(): AppConfig {
     return this.config;
@@ -308,5 +379,9 @@ export class AppStore extends EventEmitter {
 
   public getAudioEngine(): AudioEngine {
     return this.audioEngine;
+  }
+
+  public getAmbientManager(): AmbientSoundManager {
+    return this.ambientManager;
   }
 }

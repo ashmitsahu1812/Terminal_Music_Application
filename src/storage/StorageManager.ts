@@ -14,6 +14,11 @@ export class StorageManager {
     volume: 80,
     loopMode: 'off',
     isShuffle: false,
+    speed: 1.0,
+    eqPreset: 'flat',
+    ambientSound: 'none',
+    visualizerMode: 'bars',
+    discordRpcEnabled: true,
     libraryDirectories: [],
     keybindings: {
       togglePlay: 'space',

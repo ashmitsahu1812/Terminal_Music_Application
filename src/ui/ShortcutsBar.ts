@@ -43,15 +43,17 @@ export class ShortcutsBar {
     if (activeTab === 'library') {
       tabInfo = '[Enter] Play [a] Add Queue';
     } else if (activeTab === 'queue') {
-      tabInfo = '[J/K] Move Up/Down [d] Remove';
+      tabInfo = '[J/K] Move [d] Remove';
     } else if (activeTab === 'playlists') {
       tabInfo = '[:playlist create] New';
     } else if (activeTab === 'visualizer') {
-      tabInfo = 'Spectrum 60FPS';
+      tabInfo = '{yellow-fg}[v]{/yellow-fg} Switch Mode';
+    } else if (activeTab === 'lyrics') {
+      tabInfo = 'Karaoke Synced';
     } else {
-      tabInfo = 'ANSI Cover Art';
+      tabInfo = '24-bit ANSI Art';
     }
 
-    return ` {bold}[Space]{/bold} Play/Pause │ {bold}[1-5]{/bold} Tabs │ {bold}[N/P]{/bold} Next/Prev │ {bold}[H/L]{/bold} Seek -/+5s │ {bold}[/]{/bold} Search │ {bold}[:]{/bold} Cmd │ ${tabInfo}`;
+    return ` {bold}[Space]{/bold} Play/Pause │ {bold}[1-6]{/bold} Tabs │ {bold}[[/]]{/bold} Speed │ {bold}[v]{/bold} Vis │ {bold}[w]{/bold} Ambient │ {bold}[/]{/bold} Search │ {bold}[:]{/bold} Cmd │ ${tabInfo}`;
   }
 }

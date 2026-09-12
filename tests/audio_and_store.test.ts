@@ -6,6 +6,8 @@ import { StorageManager } from '../src/storage/StorageManager.js';
 import { AppStore } from '../src/store/AppStore.js';
 import { MetadataParser } from '../src/parser/MetadataParser.js';
 import { ANSIArtRenderer } from '../src/parser/ANSIArtRenderer.js';
+import { LyricsEngine } from '../src/lyrics/LyricsEngine.js';
+import { getTheme } from '../src/ui/Theme.js';
 import { Track } from '../src/types/index.js';
 
 async function runTests() {
@@ -14,10 +16,14 @@ async function runTests() {
   // Test 1: StorageManager Initialization
   console.log('1️⃣ Testing StorageManager & Configuration...');
   const testStorageDir = path.join(process.cwd(), '.test_config');
+  if (fs.existsSync(testStorageDir)) {
+    fs.rmSync(testStorageDir, { recursive: true, force: true });
+  }
   const storage = new StorageManager(testStorageDir);
   const config = storage.loadConfig();
   assert.strictEqual(config.volume, 80);
   assert.strictEqual(config.theme, 'cyberpunk');
+  assert.strictEqual(config.speed, 1.0);
   console.log('  ✓ StorageManager initialized successfully.');
 
   // Test 2: AudioEngine Initialization
@@ -27,6 +33,8 @@ async function runTests() {
   assert.strictEqual(state.isPlaying, false);
   assert.strictEqual(state.volume, 80);
   assert.strictEqual(state.loopMode, 'off');
+  assert.strictEqual(state.speed, 1.0);
+  assert.strictEqual(state.visualizerMode, 'bars');
   console.log(`  ✓ AudioEngine detected backend: ${engine.getBackend()}`);
 
   // Test 3: AppStore State Management & Queue Operations
@@ -120,12 +128,64 @@ async function runTests() {
   assert.ok(ansiArt.includes('\x1b[38;2;')); // 24-bit TrueColor ANSI check
   console.log('  ✓ ANSI Art Renderer generated valid 24-bit RGB terminal graphics.');
 
+  // Test 7: Synced LRC Lyrics Engine
+  console.log('7️⃣ Testing Synced LRC Lyrics Engine...');
+  const sampleLrc = `
+[00:00.00] Intro Music
+[00:05.50] First verse line starts here
+[00:10.25] Second line follows smoothly
+[00:15.00] Chorus explosion!
+  `;
+  const parsedLyrics = LyricsEngine.parseLrc(sampleLrc);
+  assert.strictEqual(parsedLyrics.length, 4);
+  assert.strictEqual(parsedLyrics[1].time, 5.5);
+  assert.strictEqual(parsedLyrics[1].text, 'First verse line starts here');
+
+  // Verify active line lookup
+  assert.strictEqual(LyricsEngine.getActiveIndex(parsedLyrics, 0), 0);
+  assert.strictEqual(LyricsEngine.getActiveIndex(parsedLyrics, 6.0), 1);
+  assert.strictEqual(LyricsEngine.getActiveIndex(parsedLyrics, 12.0), 2);
+  assert.strictEqual(LyricsEngine.getActiveIndex(parsedLyrics, 20.0), 3);
+  console.log('  ✓ LRC Parser and millisecond timestamp sync verified.');
+
+  // Test 8: DJ Effects, Nightcore & Vaporwave Speed Engine
+  console.log('8️⃣ Testing DJ Speed Controls & Nightcore/Vaporwave Modes...');
+  store.setSpeed(1.5);
+  assert.strictEqual(store.getAudioEngine().getState().speed, 1.5);
+
+  store.setNightcore();
+  assert.strictEqual(store.getAudioEngine().getState().speed, 1.25);
+
+  store.setVaporwave();
+  assert.strictEqual(store.getAudioEngine().getState().speed, 0.8);
+  console.log('  ✓ Playback speed multipliers and presets verified.');
+
+  // Test 9: Multi-Mode Visualizer & Ambient Sounds
+  console.log('9️⃣ Testing Multi-Mode Visualizer & Ambient Layers...');
+  const nextMode = store.cycleVisualizerMode();
+  assert.strictEqual(nextMode, 'wave');
+
+  const nextAmbient = store.cycleAmbientSound();
+  assert.strictEqual(nextAmbient, 'rain');
+
+  const chromaTheme = getTheme('chroma');
+  assert.strictEqual(chromaTheme.name, 'chroma');
+
+  const synthwaveTheme = getTheme('synthwave');
+  assert.strictEqual(synthwaveTheme.name, 'synthwave');
+  console.log('  ✓ Visualizer modes, ambient layers, and Chroma themes verified.');
+
+  // Stop any audio or ambient playback immediately so tests remain completely silent
+  store.setAmbientSound('none');
+  store.getAudioEngine().stop();
+
   // Clean up test temp dir
   if (fs.existsSync(testStorageDir)) {
     fs.rmSync(testStorageDir, { recursive: true, force: true });
   }
 
   console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY!');
+  process.exit(0);
 }
 
 runTests().catch((err) => {

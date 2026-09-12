@@ -28,6 +28,11 @@ export class HeaderComponent {
       content: this.getContent(),
     });
 
+    this.appStore.on('updated', () => {
+      this.box.setContent(this.getContent());
+      screen.render();
+    });
+
     this.clockTimer = setInterval(() => {
       this.box.setContent(this.getContent());
       screen.render();
@@ -51,10 +56,29 @@ export class HeaderComponent {
 
     const titleLogo = `{bold}{magenta-fg}♫ TERMINAL MUSIC PLAYER ♫{/magenta-fg}{/bold}`;
     const deviceStr = `{cyan-fg}Backend:{/cyan-fg} ${state.audioBackend.toUpperCase()}`;
+
+    // Speed badge
+    let speedStr = `{white-fg}${state.speed}x{/white-fg}`;
+    if (state.speed === 1.25) speedStr = `{bold}{magenta-fg}1.25x [NIGHTCORE]{/magenta-fg}{/bold}`;
+    else if (state.speed === 0.8) speedStr = `{bold}{cyan-fg}0.8x [VAPORWAVE]{/cyan-fg}{/bold}`;
+    else if (state.speed !== 1.0) speedStr = `{yellow-fg}${state.speed}x{/yellow-fg}`;
+
+    // Ambient badge
+    let ambientStr = '';
+    if (state.ambientSound !== 'none') {
+      const iconMap: Record<string, string> = {
+        rain: '🌧️ RAIN',
+        vinyl: '📻 VINYL',
+        fire: '🔥 FIRE',
+        cafe: '☕ CAFE',
+      };
+      ambientStr = `  │  {blue-fg}${iconMap[state.ambientSound] || state.ambientSound.toUpperCase()}{/blue-fg}`;
+    }
+
     const themeStr = `{yellow-fg}Theme:{/yellow-fg} ${config.theme}`;
     const clockStr = `{white-fg}${timeStr}{/white-fg}`;
 
-    return ` ${titleLogo}  │  ${deviceStr}  │  ${themeStr}  │  ${clockStr}`;
+    return ` ${titleLogo}  │  ${deviceStr}  │  ${speedStr}${ambientStr}  │  ${themeStr}  │  ${clockStr}`;
   }
 
   public destroy(): void {

@@ -1,7 +1,9 @@
 import blessed from 'neo-blessed';
 import { AppStore } from '../store/AppStore.js';
 import { MetadataParser } from '../parser/MetadataParser.js';
+import { YouTubeStreamer } from '../audio/YouTubeStreamer.js';
 import { getTheme } from './Theme.js';
+import { AmbientSoundType, VisualizerMode } from '../types/index.js';
 
 export class CommandPalette {
   private form: blessed.Widgets.FormElement<any>;
@@ -65,7 +67,7 @@ export class CommandPalette {
 
   public showCommand(): void {
     this.mode = 'command';
-    this.form.setLabel(' Command Palette (e.g. :play <name>, :theme cyberpunk, :volume 80, :help) ');
+    this.form.setLabel(' Command Palette (:yt <search>, :nightcore, :vaporwave, :ambient rain, :speed 1.5, :theme chroma, :help) ');
     this.input.setValue(':');
     this.form.show();
     this.input.focus();
@@ -105,6 +107,53 @@ export class CommandPalette {
     const arg = parts.slice(1).join(' ');
 
     switch (cmd) {
+      case 'yt':
+      case 'youtube': {
+        if (!arg) break;
+        try {
+          const ytTrack = await YouTubeStreamer.resolveStream(arg);
+          if (ytTrack) {
+            this.appStore.addTrack(ytTrack);
+            this.appStore.playTrack(ytTrack);
+          }
+        } catch (err: any) {
+          console.error(err.message);
+        }
+        break;
+      }
+      case 'nightcore': {
+        this.appStore.setNightcore();
+        break;
+      }
+      case 'vaporwave': {
+        this.appStore.setVaporwave();
+        break;
+      }
+      case 'speed': {
+        const val = parseFloat(arg);
+        if (!isNaN(val)) {
+          this.appStore.setSpeed(val);
+        }
+        break;
+      }
+      case 'ambient': {
+        const raw = arg.toLowerCase();
+        if (raw === 'off' || raw === 'stop' || raw === 'none' || !raw) {
+          this.appStore.setAmbientSound('none');
+        } else if (['rain', 'vinyl', 'fire', 'cafe'].includes(raw)) {
+          this.appStore.setAmbientSound(raw as AmbientSoundType);
+        }
+        break;
+      }
+      case 'vis':
+      case 'visualizer': {
+        const sub = arg.toLowerCase() as VisualizerMode;
+        if (['bars', 'wave', 'matrix', 'fire', 'vumeter'].includes(sub)) {
+          this.appStore.getAudioEngine().setVisualizerMode(sub);
+          this.appStore.setActiveTab('visualizer');
+        }
+        break;
+      }
       case 'play': {
         if (!arg) break;
         const tracks = this.appStore.getAllTracks();

@@ -1,11 +1,12 @@
 import { EventEmitter } from 'events';
 import { spawn, ChildProcess, execSync } from 'child_process';
-import { Track, PlaybackState, LoopMode } from '../types/index.js';
+import { Track, PlaybackState, LoopMode, VisualizerMode, AmbientSoundType, EQPreset } from '../types/index.js';
 import fs from 'fs';
 import path from 'path';
 
 export class AudioEngine extends EventEmitter {
   private childProcess: ChildProcess | null = null;
+  private ambientProcess: ChildProcess | null = null;
   private currentTrack: Track | null = null;
   private isPlaying: boolean = false;
   private isPaused: boolean = false;
@@ -17,6 +18,10 @@ export class AudioEngine extends EventEmitter {
   private loopMode: LoopMode = 'off';
   private isShuffle: boolean = false;
   private backend: string = 'afplay';
+  private speed: number = 1.0; // 0.5 - 2.0
+  private eqPreset: EQPreset = 'flat';
+  private ambientSound: AmbientSoundType = 'none';
+  private visualizerMode: VisualizerMode = 'bars';
   private ticker: NodeJS.Timeout | null = null;
   private startTime: number = 0;
   private pausedDuration: number = 0;
@@ -65,13 +70,20 @@ export class AudioEngine extends EventEmitter {
       loopMode: this.loopMode,
       isShuffle: this.isShuffle,
       audioBackend: this.backend,
+      speed: this.speed,
+      eqPreset: this.eqPreset,
+      ambientSound: this.ambientSound,
+      visualizerMode: this.visualizerMode,
+      lyrics: this.currentTrack?.lyrics,
     };
   }
 
   public async play(track: Track, startOffset: number = 0): Promise<void> {
     this.stopProcessOnly();
 
-    if (!fs.existsSync(track.filePath)) {
+    // Check if filePath exists or if it's a stream URL
+    const isStream = track.filePath.startsWith('http://') || track.filePath.startsWith('https://');
+    if (!isStream && !fs.existsSync(track.filePath)) {
       this.emit('error', new Error(`Audio file not found: ${track.filePath}`));
       return;
     }
@@ -81,25 +93,25 @@ export class AudioEngine extends EventEmitter {
     this.position = startOffset;
     this.isPlaying = true;
     this.isPaused = false;
-    this.startTime = Date.now() - startOffset * 1000;
+    this.startTime = Date.now() - (startOffset / this.speed) * 1000;
     this.pausedDuration = 0;
 
     const volScale = this.isMuted ? 0 : this.getScaledVolume();
 
     try {
-      if (this.backend === 'afplay') {
-        const args: string[] = ['-v', volScale.toFixed(2)];
+      if (this.backend === 'afplay' && !isStream) {
+        const args: string[] = ['-v', volScale.toFixed(2), '-r', this.speed.toFixed(2)];
         if (startOffset > 0) {
-          // afplay supports -s <seconds> for start time or we pass position calculation
           args.push('-s', startOffset.toString());
         }
         args.push(track.filePath);
         this.childProcess = spawn('afplay', args, { stdio: 'ignore' });
-      } else if (this.backend === 'mpv') {
+      } else if (this.backend === 'mpv' || isStream) {
         const args: string[] = [
           '--no-terminal',
           '--no-video',
           `--volume=${Math.floor(this.volume)}`,
+          `--speed=${this.speed.toFixed(2)}`,
         ];
         if (startOffset > 0) {
           args.push(`--start=${startOffset}`);
@@ -107,7 +119,14 @@ export class AudioEngine extends EventEmitter {
         args.push(track.filePath);
         this.childProcess = spawn('mpv', args, { stdio: 'ignore' });
       } else if (this.backend === 'ffplay') {
-        const args: string[] = ['-nodisp', '-autoexit', '-volume', `${Math.floor(this.volume)}`];
+        const args: string[] = [
+          '-nodisp',
+          '-autoexit',
+          '-volume',
+          `${Math.floor(this.volume)}`,
+          '-af',
+          `atempo=${this.speed.toFixed(2)}`,
+        ];
         if (startOffset > 0) {
           args.push('-ss', startOffset.toString());
         }
@@ -115,7 +134,7 @@ export class AudioEngine extends EventEmitter {
         this.childProcess = spawn('ffplay', args, { stdio: 'ignore' });
       } else {
         // Fallback afplay
-        this.childProcess = spawn('afplay', ['-v', volScale.toFixed(2), track.filePath], { stdio: 'ignore' });
+        this.childProcess = spawn('afplay', ['-v', volScale.toFixed(2), '-r', this.speed.toFixed(2), track.filePath], { stdio: 'ignore' });
       }
 
       this.startTicker();
@@ -146,6 +165,9 @@ export class AudioEngine extends EventEmitter {
 
     try {
       this.childProcess.kill('SIGSTOP');
+      if (this.ambientProcess) {
+        this.ambientProcess.kill('SIGSTOP');
+      }
       this.isPaused = true;
       this.pauseStartTime = Date.now();
       this.stopTicker();
@@ -160,6 +182,9 @@ export class AudioEngine extends EventEmitter {
 
     try {
       this.childProcess.kill('SIGCONT');
+      if (this.ambientProcess) {
+        this.ambientProcess.kill('SIGCONT');
+      }
       this.isPaused = false;
       this.pausedDuration += Date.now() - this.pauseStartTime;
       this.startTicker();
@@ -180,6 +205,7 @@ export class AudioEngine extends EventEmitter {
 
   public stop(): void {
     this.stopProcessOnly();
+    this.stopAmbientSound();
     this.isPlaying = false;
     this.isPaused = false;
     this.currentTrack = null;
@@ -208,9 +234,8 @@ export class AudioEngine extends EventEmitter {
     if (this.volume > 0 && this.isMuted) {
       this.isMuted = false;
     }
-    // Re-apply if playing using logarithmic gain
     if (this.currentTrack && this.isPlaying) {
-      this.seek(0); // Restart process with updated volume setting
+      this.seek(0);
     } else {
       this.emit('state-changed', this.getState());
     }
@@ -231,6 +256,34 @@ export class AudioEngine extends EventEmitter {
     }
   }
 
+  public setSpeed(speed: number): void {
+    // Clamp speed between 0.5x and 2.0x
+    this.speed = Math.max(0.5, Math.min(2.0, parseFloat(speed.toFixed(2))));
+    if (this.currentTrack && this.isPlaying) {
+      this.seek(0);
+    } else {
+      this.emit('state-changed', this.getState());
+    }
+  }
+
+  public setEQPreset(preset: EQPreset): void {
+    this.eqPreset = preset;
+    this.emit('state-changed', this.getState());
+  }
+
+  public setVisualizerMode(mode: VisualizerMode): void {
+    this.visualizerMode = mode;
+    this.emit('state-changed', this.getState());
+  }
+
+  public cycleVisualizerMode(): VisualizerMode {
+    const modes: VisualizerMode[] = ['bars', 'wave', 'matrix', 'fire', 'vumeter'];
+    const idx = modes.indexOf(this.visualizerMode);
+    const next = modes[(idx + 1) % modes.length];
+    this.setVisualizerMode(next);
+    return next;
+  }
+
   public setLoopMode(mode: LoopMode): void {
     this.loopMode = mode;
     this.emit('state-changed', this.getState());
@@ -241,8 +294,41 @@ export class AudioEngine extends EventEmitter {
     this.emit('state-changed', this.getState());
   }
 
+  public setAmbientSound(ambient: AmbientSoundType, ambientFilePath?: string): void {
+    this.ambientSound = ambient;
+    this.stopAmbientSound();
+
+    if (ambient !== 'none' && ambientFilePath && fs.existsSync(ambientFilePath)) {
+      this.startAmbientSound(ambientFilePath);
+    }
+    this.emit('state-changed', this.getState());
+  }
+
+  private startAmbientSound(filePath: string): void {
+    try {
+      if (process.platform === 'darwin') {
+        // Play looped ambient sound at gentle 35% background volume
+        this.ambientProcess = spawn('afplay', ['-v', '0.35', filePath], { stdio: 'ignore' });
+        this.ambientProcess.on('exit', () => {
+          if (this.ambientSound !== 'none') {
+            this.startAmbientSound(filePath); // Loop continuously
+          }
+        });
+      }
+    } catch {}
+  }
+
+  private stopAmbientSound(): void {
+    if (this.ambientProcess) {
+      try {
+        this.ambientProcess.removeAllListeners('exit');
+        this.ambientProcess.kill('SIGKILL');
+      } catch {}
+      this.ambientProcess = null;
+    }
+  }
+
   private getScaledVolume(): number {
-    // Logarithmic volume scaling: (vol / 100) ^ 2
     const normalized = this.volume / 100;
     return Math.pow(normalized, 2);
   }
@@ -251,12 +337,13 @@ export class AudioEngine extends EventEmitter {
     this.stopTicker();
     this.ticker = setInterval(() => {
       if (this.isPlaying && !this.isPaused) {
-        const elapsed = (Date.now() - this.startTime - this.pausedDuration) / 1000;
+        const rawElapsed = (Date.now() - this.startTime - this.pausedDuration) / 1000;
+        const elapsed = rawElapsed * this.speed;
         this.position = Math.min(elapsed, this.duration);
         this.emit('position', { position: this.position, duration: this.duration });
         this.emit('state-changed', this.getState());
       }
-    }, 250);
+    }, 200);
   }
 
   private stopTicker(): void {

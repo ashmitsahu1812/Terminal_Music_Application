@@ -7,6 +7,7 @@ import { PlaylistView } from './PlaylistView.js';
 import { QueueView } from './QueueView.js';
 import { VisualizerView } from './VisualizerView.js';
 import { AlbumArtView } from './AlbumArtView.js';
+import { LyricsView } from './LyricsView.js';
 import { CommandPalette } from './CommandPalette.js';
 import { ShortcutsBar } from './ShortcutsBar.js';
 import { getTheme } from './Theme.js';
@@ -26,6 +27,7 @@ export class UIManager {
   private queueView: QueueView;
   private visualizerView: VisualizerView;
   private albumArtView: AlbumArtView;
+  private lyricsView: LyricsView;
 
   private tabBoxes: Record<ViewTab, blessed.Widgets.BoxElement>;
 
@@ -64,6 +66,7 @@ export class UIManager {
       queue: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       visualizer: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       art: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
+      lyrics: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
     };
 
     // Instantiate views inside container boxes
@@ -72,6 +75,7 @@ export class UIManager {
     this.queueView = new QueueView(this.tabBoxes.queue, this.appStore);
     this.visualizerView = new VisualizerView(this.tabBoxes.visualizer, this.appStore);
     this.albumArtView = new AlbumArtView(this.tabBoxes.art, this.appStore);
+    this.lyricsView = new LyricsView(this.tabBoxes.lyrics, this.appStore);
 
     this.setupGlobalKeybindings();
 
@@ -119,6 +123,9 @@ export class UIManager {
       case 'art':
         this.albumArtView.focus();
         break;
+      case 'lyrics':
+        this.lyricsView.focus();
+        break;
     }
   }
 
@@ -132,6 +139,7 @@ export class UIManager {
     this.queueView.updateTheme();
     this.visualizerView.updateTheme();
     this.albumArtView.updateTheme();
+    this.lyricsView.updateTheme();
     this.screen.render();
   }
 
@@ -191,6 +199,32 @@ export class UIManager {
       this.appStore.getAudioEngine().toggleMute();
     });
 
+    // DJ Speed multiplier: [ / ]
+    this.screen.key([']'], () => {
+      if (this.commandPalette.isVisible()) return;
+      const curSpeed = this.appStore.getAudioEngine().getState().speed;
+      this.appStore.setSpeed(curSpeed + 0.1);
+    });
+
+    this.screen.key(['['], () => {
+      if (this.commandPalette.isVisible()) return;
+      const curSpeed = this.appStore.getAudioEngine().getState().speed;
+      this.appStore.setSpeed(curSpeed - 0.1);
+    });
+
+    // Visualizer mode switcher: v
+    this.screen.key(['v'], () => {
+      if (this.commandPalette.isVisible()) return;
+      this.appStore.cycleVisualizerMode();
+      this.appStore.setActiveTab('visualizer');
+    });
+
+    // Ambient background sound mixer: w
+    this.screen.key(['w'], () => {
+      if (this.commandPalette.isVisible()) return;
+      this.appStore.cycleAmbientSound();
+    });
+
     // Loop & Shuffle toggles: r / s
     this.screen.key(['r'], () => {
       if (this.commandPalette.isVisible()) return;
@@ -202,12 +236,13 @@ export class UIManager {
       this.appStore.toggleShuffle();
     });
 
-    // Tab view switching: 1, 2, 3, 4, 5
+    // Tab view switching: 1, 2, 3, 4, 5, 6
     this.screen.key(['1'], () => this.appStore.setActiveTab('library'));
     this.screen.key(['2'], () => this.appStore.setActiveTab('playlists'));
     this.screen.key(['3'], () => this.appStore.setActiveTab('queue'));
     this.screen.key(['4'], () => this.appStore.setActiveTab('visualizer'));
     this.screen.key(['5'], () => this.appStore.setActiveTab('art'));
+    this.screen.key(['6'], () => this.appStore.setActiveTab('lyrics'));
 
     // Command palette and search triggers: : and /
     this.screen.key([':'], () => {
