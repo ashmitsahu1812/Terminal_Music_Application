@@ -285,6 +285,23 @@ export class CommandPalette {
         }
         break;
       }
+      case 'eq':
+      case 'equalizer': {
+        const sub = parts[1]?.toLowerCase();
+        if (!sub) {
+          // Open the EQ tab
+          this.appStore.setActiveTab('equalizer');
+        } else {
+          // :eq preset <name>  or  :eq <preset-name>
+          const presetArg = (sub === 'preset' ? parts[2] : sub)?.toLowerCase();
+          const validPresets = ['flat', 'bass_boost', 'treble_boost', 'electronic', 'rock', 'vocal', 'lofi', 'acoustic'];
+          if (presetArg && validPresets.includes(presetArg)) {
+            this.appStore.setEQPreset(presetArg as any);
+            this.appStore.setActiveTab('equalizer');
+          }
+        }
+        break;
+      }
       case 'q':
       case 'quit': {
         process.exit(0);

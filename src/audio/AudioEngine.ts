@@ -20,6 +20,7 @@ export class AudioEngine extends EventEmitter {
   private backend: string = 'afplay';
   private speed: number = 1.0; // 0.5 - 2.0
   private eqPreset: EQPreset = 'flat';
+  private eqBands: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   private ambientSound: AmbientSoundType = 'none';
   private visualizerMode: VisualizerMode = 'bars';
   private ticker: NodeJS.Timeout | null = null;
@@ -72,6 +73,7 @@ export class AudioEngine extends EventEmitter {
       audioBackend: this.backend,
       speed: this.speed,
       eqPreset: this.eqPreset,
+      eqBands: this.eqBands,
       ambientSound: this.ambientSound,
       visualizerMode: this.visualizerMode,
       lyrics: this.currentTrack?.lyrics,
@@ -268,6 +270,13 @@ export class AudioEngine extends EventEmitter {
 
   public setEQPreset(preset: EQPreset): void {
     this.eqPreset = preset;
+    this.emit('state-changed', this.getState());
+  }
+
+  public setEQBands(gains: number[]): void {
+    // Store custom band gains for future audio backend integration
+    this.eqBands = gains;
+    this.eqPreset = 'custom';
     this.emit('state-changed', this.getState());
   }
 

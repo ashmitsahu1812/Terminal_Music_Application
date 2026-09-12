@@ -275,6 +275,44 @@ async function runTests() {
     fs.rmSync(testStorageDir, { recursive: true, force: true });
   }
 
+  // Test 13: 10-Band Equalizer Manager & Preset System
+  console.log('1️⃣3️⃣ Testing 10-Band Equalizer Manager & Preset System...');
+  const eq = store.getEqualizerManager();
+  // Default flat preset
+  const flatGains = eq.getGains();
+  assert.ok(flatGains.every((g) => g === 0), 'Flat preset should have 0dB on all bands');
+  assert.strictEqual(eq.getPreset(), 'flat', 'Default preset should be flat');
+  // Apply bass boost preset
+  store.setEQPreset('bass_boost');
+  const bbGains = eq.getGains();
+  assert.ok(bbGains[0] > 0, 'Bass boost should boost 32Hz band');
+  assert.strictEqual(eq.getPreset(), 'bass_boost');
+  // Custom band adjustment
+  store.setEQPreset('flat');
+  eq.adjustBandGain(0, 5); // +5 on 32Hz
+  eq.adjustBandGain(9, -3); // -3 on 16kHz
+  store.applyCustomEQBands(eq.getGains());
+  assert.strictEqual(eq.getPreset(), 'custom');
+  assert.strictEqual(eq.getGains()[0], 5);
+  assert.strictEqual(eq.getGains()[9], -3);
+  // Gain clamping at ±12dB
+  eq.setBandGain(0, 20);
+  assert.strictEqual(eq.getGains()[0], 12, 'Gain should clamp to +12dB max');
+  eq.setBandGain(0, -20);
+  assert.strictEqual(eq.getGains()[0], -12, 'Gain should clamp to -12dB min');
+  // FFmpeg filter string for non-zero bands
+  store.setEQPreset('bass_boost');
+  const filterStr = eq.getFFmpegFilterString();
+  assert.ok(filterStr.includes('equalizer='), 'Bass boost should generate FFmpeg equalizer filters');
+  // Flat preset yields anull (passthrough)
+  store.setEQPreset('flat');
+  const nullFilter = eq.getFFmpegFilterString();
+  assert.strictEqual(nullFilter, 'anull', 'Flat preset should yield anull passthrough filter');
+  // Preset list completeness
+  const presets = eq.getPresetList();
+  assert.strictEqual(presets.length, 9, 'Should have 9 EQ presets');
+  console.log('  ✓ Equalizer bands, presets, gain clamping, and FFmpeg filter generation verified.');
+
   console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY!');
   process.exit(0);
 }

@@ -8,6 +8,7 @@ import { DiscordRPC } from '../integrations/DiscordRPC.js';
 import { RadioManager } from '../radio/RadioManager.js';
 import { LyricsCacheManager } from '../lyrics/LyricsCacheManager.js';
 import { TimerManager } from '../timer/TimerManager.js';
+import { EqualizerManager } from '../audio/EqualizerManager.js';
 
 export class AppStore extends EventEmitter {
   private audioEngine: AudioEngine;
@@ -16,6 +17,7 @@ export class AppStore extends EventEmitter {
   private radioManager: RadioManager;
   private lyricsCacheManager: LyricsCacheManager;
   private timerManager: TimerManager;
+  private equalizerManager: EqualizerManager;
   private discordRpc: DiscordRPC | null = null;
 
   private tracks: Track[] = [];
@@ -44,6 +46,10 @@ export class AppStore extends EventEmitter {
     this.radioManager = new RadioManager();
     this.lyricsCacheManager = new LyricsCacheManager();
     this.timerManager = new TimerManager(this);
+    this.equalizerManager = new EqualizerManager(
+      this.config.eqPreset || 'flat',
+      this.config.eqBands,
+    );
 
     this.timerManager.on('tick', () => {
       this.emit('timer-tick');
@@ -347,9 +353,24 @@ export class AppStore extends EventEmitter {
 
   public setEQPreset(preset: EQPreset): void {
     this.config.eqPreset = preset;
+    this.equalizerManager.setPreset(preset);
+    this.config.eqBands = this.equalizerManager.getGains();
     this.storageManager.saveConfig(this.config);
     this.audioEngine.setEQPreset(preset);
     this.emit('updated');
+  }
+
+  public applyCustomEQBands(gains: number[]): void {
+    gains.forEach((g, i) => this.equalizerManager.setBandGain(i, g));
+    this.config.eqPreset = 'custom';
+    this.config.eqBands = gains;
+    this.storageManager.saveConfig(this.config);
+    this.audioEngine.setEQBands?.(gains);
+    this.emit('updated');
+  }
+
+  public getEqualizerManager(): EqualizerManager {
+    return this.equalizerManager;
   }
 
   // Ambient Sound Manager

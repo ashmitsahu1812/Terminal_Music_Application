@@ -34,7 +34,13 @@ export interface Playlist {
 export type LoopMode = 'off' | 'track' | 'queue';
 export type VisualizerMode = 'bars' | 'wave' | 'matrix' | 'fire' | 'vumeter';
 export type AmbientSoundType = 'none' | 'rain' | 'vinyl' | 'fire' | 'cafe';
-export type EQPreset = 'flat' | 'bass_boost' | 'treble_boost' | 'electronic' | 'vocal' | 'lofi';
+export type EQPreset = 'flat' | 'bass_boost' | 'treble_boost' | 'electronic' | 'rock' | 'vocal' | 'lofi' | 'acoustic' | 'custom';
+
+export interface EqualizerBand {
+  frequency: number;
+  label: string;
+  gain: number; // in dB (-12 to +12)
+}
 
 export interface PlaybackState {
   currentTrack: Track | null;
@@ -50,6 +56,7 @@ export interface PlaybackState {
   audioBackend: string; // 'afplay' | 'mpv' | 'ffplay' | 'mock'
   speed: number; // 0.5 to 2.0 (1.0 = normal, 1.25 = nightcore, 0.8 = vaporwave)
   eqPreset: EQPreset;
+  eqBands: number[]; // 10 gain values in dB
   ambientSound: AmbientSoundType;
   visualizerMode: VisualizerMode;
   lyrics?: LyricLine[];
@@ -65,6 +72,7 @@ export interface AppConfig {
   audioBackendPreference?: string;
   speed: number;
   eqPreset: EQPreset;
+  eqBands?: number[];
   ambientSound: AmbientSoundType;
   visualizerMode: VisualizerMode;
   discordRpcEnabled: boolean;
@@ -80,7 +88,7 @@ export interface RadioStation {
   country?: string;
 }
 
-export type ViewTab = 'library' | 'playlists' | 'queue' | 'visualizer' | 'art' | 'lyrics' | 'radio';
+export type ViewTab = 'library' | 'playlists' | 'queue' | 'visualizer' | 'art' | 'lyrics' | 'radio' | 'equalizer';
 
 export interface Command {
   name: string;
