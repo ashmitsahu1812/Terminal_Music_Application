@@ -1,0 +1,312 @@
+import { EventEmitter } from 'events';
+import Fuse from 'fuse.js';
+import { Track, Playlist, AppConfig, LoopMode, ViewTab } from '../types/index.js';
+import { AudioEngine } from '../audio/AudioEngine.js';
+import { StorageManager } from '../storage/StorageManager.js';
+
+export class AppStore extends EventEmitter {
+  private audioEngine: AudioEngine;
+  private storageManager: StorageManager;
+  private tracks: Track[] = [];
+  private filteredTracks: Track[] = [];
+  private queue: Track[] = [];
+  private history: Track[] = [];
+  private playlists: Playlist[] = [];
+  private config: AppConfig;
+  private activeTab: ViewTab = 'library';
+  private searchQuery: string = '';
+  private fuse: Fuse<Track> | null = null;
+  private isShuffled: boolean = false;
+  private unShuffledQueue: Track[] = [];
+
+  constructor(audioEngine: AudioEngine, storageManager: StorageManager) {
+    super();
+    this.audioEngine = audioEngine;
+    this.storageManager = storageManager;
+    this.config = this.storageManager.loadConfig();
+    this.playlists = this.storageManager.loadPlaylists();
+    this.tracks = this.storageManager.loadLibraryTracks();
+    this.filteredTracks = [...this.tracks];
+    this.initFuse();
+
+    // Sync Audio Engine settings from persisted config
+    this.audioEngine.setVolume(this.config.volume);
+    this.audioEngine.setLoopMode(this.config.loopMode);
+    this.audioEngine.setShuffle(this.config.isShuffle);
+    this.isShuffled = this.config.isShuffle;
+
+    // Listen to Audio Engine events
+    this.audioEngine.on('track-ended', (endedTrack: Track | null) => {
+      this.handleTrackEnded(endedTrack);
+    });
+
+    this.audioEngine.on('state-changed', () => {
+      this.emit('updated');
+    });
+
+    this.audioEngine.on('position', (pos) => {
+      this.emit('position', pos);
+    });
+  }
+
+  private initFuse(): void {
+    this.fuse = new Fuse(this.tracks, {
+      keys: ['title', 'artist', 'album', 'genre'],
+      threshold: 0.4,
+    });
+  }
+
+  public setTracks(tracks: Track[]): void {
+    this.tracks = tracks;
+    this.initFuse();
+    this.applySearchQuery(this.searchQuery);
+    this.storageManager.saveLibraryTracks(tracks);
+    this.emit('updated');
+  }
+
+  public addTrack(track: Track): void {
+    if (!this.tracks.some((t) => t.id === track.id)) {
+      this.tracks.push(track);
+      this.initFuse();
+      this.applySearchQuery(this.searchQuery);
+      this.storageManager.saveLibraryTracks(this.tracks);
+      this.emit('updated');
+    }
+  }
+
+  public getTracks(): Track[] {
+    return this.filteredTracks;
+  }
+
+  public getAllTracks(): Track[] {
+    return this.tracks;
+  }
+
+  public setSearchQuery(query: string): void {
+    this.searchQuery = query;
+    this.applySearchQuery(query);
+    this.emit('updated');
+  }
+
+  private applySearchQuery(query: string): void {
+    if (!query || query.trim() === '') {
+      this.filteredTracks = [...this.tracks];
+    } else if (this.fuse) {
+      const results = this.fuse.search(query);
+      this.filteredTracks = results.map((res) => res.item);
+    }
+  }
+
+  // Queue Operations
+  public getQueue(): Track[] {
+    return this.queue;
+  }
+
+  public addToQueue(track: Track): void {
+    this.queue.push(track);
+    this.emit('updated');
+  }
+
+  public playTrack(track: Track): void {
+    const currentState = this.audioEngine.getState();
+    if (currentState.currentTrack) {
+      this.history.push(currentState.currentTrack);
+    }
+    this.audioEngine.play(track);
+    this.emit('updated');
+  }
+
+  public playQueueIndex(index: number): void {
+    if (index < 0 || index >= this.queue.length) return;
+    const track = this.queue.splice(index, 1)[0];
+    this.playTrack(track);
+  }
+
+  public moveQueueTrack(fromIndex: number, toIndex: number): void {
+    if (
+      fromIndex < 0 ||
+      fromIndex >= this.queue.length ||
+      toIndex < 0 ||
+      toIndex >= this.queue.length
+    ) {
+      return;
+    }
+    const [moved] = this.queue.splice(fromIndex, 1);
+    this.queue.splice(toIndex, 0, moved);
+    this.emit('updated');
+  }
+
+  public removeFromQueue(index: number): void {
+    if (index >= 0 && index < this.queue.length) {
+      this.queue.splice(index, 1);
+      this.emit('updated');
+    }
+  }
+
+  public clearQueue(): void {
+    this.queue = [];
+    this.emit('updated');
+  }
+
+  public toggleShuffle(): void {
+    this.isShuffled = !this.isShuffled;
+    this.config.isShuffle = this.isShuffled;
+    this.storageManager.saveConfig(this.config);
+    this.audioEngine.setShuffle(this.isShuffled);
+
+    if (this.isShuffled && this.queue.length > 0) {
+      this.unShuffledQueue = [...this.queue];
+      this.shuffleQueueFisherYates();
+    } else if (!this.isShuffled && this.unShuffledQueue.length > 0) {
+      this.queue = [...this.unShuffledQueue];
+    }
+    this.emit('updated');
+  }
+
+  private shuffleQueueFisherYates(): void {
+    for (let i = this.queue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.queue[i], this.queue[j]] = [this.queue[j], this.queue[i]];
+    }
+  }
+
+  public cycleLoopMode(): void {
+    const modes: LoopMode[] = ['off', 'track', 'queue'];
+    const currentIndex = modes.indexOf(this.config.loopMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    this.config.loopMode = nextMode;
+    this.storageManager.saveConfig(this.config);
+    this.audioEngine.setLoopMode(nextMode);
+    this.emit('updated');
+  }
+
+  public nextTrack(): void {
+    const state = this.audioEngine.getState();
+    if (state.currentTrack && state.loopMode === 'track') {
+      this.audioEngine.play(state.currentTrack);
+      return;
+    }
+
+    if (this.queue.length > 0) {
+      const next = this.queue.shift()!;
+      this.playTrack(next);
+    } else if (state.loopMode === 'queue' && this.history.length > 0) {
+      this.queue = [...this.history];
+      this.history = [];
+      if (this.queue.length > 0) {
+        const next = this.queue.shift()!;
+        this.playTrack(next);
+      }
+    } else {
+      this.audioEngine.stop();
+    }
+  }
+
+  public previousTrack(): void {
+    const state = this.audioEngine.getState();
+
+    // If played more than 3 seconds, restart current track
+    if (state.position > 3 && state.currentTrack) {
+      this.audioEngine.play(state.currentTrack);
+      return;
+    }
+
+    if (this.history.length > 0) {
+      const prev = this.history.pop()!;
+      if (state.currentTrack) {
+        this.queue.unshift(state.currentTrack);
+      }
+      this.audioEngine.play(prev);
+    } else if (state.currentTrack) {
+      this.audioEngine.play(state.currentTrack);
+    }
+  }
+
+  private handleTrackEnded(endedTrack: Track | null): void {
+    const state = this.audioEngine.getState();
+    if (state.loopMode === 'track' && endedTrack) {
+      this.audioEngine.play(endedTrack);
+    } else {
+      this.nextTrack();
+    }
+  }
+
+  // Playlist Management
+  public getPlaylists(): Playlist[] {
+    return this.playlists;
+  }
+
+  public createPlaylist(name: string, description?: string): Playlist {
+    const playlist: Playlist = {
+      id: `pl-${Date.now()}`,
+      name,
+      description,
+      trackIds: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.playlists.push(playlist);
+    this.storageManager.savePlaylists(this.playlists);
+    this.emit('updated');
+    return playlist;
+  }
+
+  public renamePlaylist(id: string, newName: string): void {
+    const pl = this.playlists.find((p) => p.id === id);
+    if (pl) {
+      pl.name = newName;
+      pl.updatedAt = new Date().toISOString();
+      this.storageManager.savePlaylists(this.playlists);
+      this.emit('updated');
+    }
+  }
+
+  public deletePlaylist(id: string): void {
+    this.playlists = this.playlists.filter((p) => p.id !== id);
+    this.storageManager.savePlaylists(this.playlists);
+    this.emit('updated');
+  }
+
+  public addTrackToPlaylist(playlistId: string, trackId: string): void {
+    const pl = this.playlists.find((p) => p.id === playlistId);
+    if (pl && !pl.trackIds.includes(trackId)) {
+      pl.trackIds.push(trackId);
+      pl.updatedAt = new Date().toISOString();
+      this.storageManager.savePlaylists(this.playlists);
+      this.emit('updated');
+    }
+  }
+
+  // Active View Tab
+  public getActiveTab(): ViewTab {
+    return this.activeTab;
+  }
+
+  public setActiveTab(tab: ViewTab): void {
+    this.activeTab = tab;
+    this.emit('updated');
+  }
+
+  // Config & Audio Getters
+  public getConfig(): AppConfig {
+    return this.config;
+  }
+
+  public setVolume(vol: number): void {
+    this.config.volume = vol;
+    this.storageManager.saveConfig(this.config);
+    this.audioEngine.setVolume(vol);
+    this.emit('updated');
+  }
+
+  public setTheme(themeName: string): void {
+    this.config.theme = themeName;
+    this.storageManager.saveConfig(this.config);
+    this.emit('updated');
+    this.emit('theme-changed', themeName);
+  }
+
+  public getAudioEngine(): AudioEngine {
+    return this.audioEngine;
+  }
+}
