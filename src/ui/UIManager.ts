@@ -13,6 +13,7 @@ import { EqualizerView } from './EqualizerView.js';
 import { StatsView } from './StatsView.js';
 import { SmartPlaylistView } from './SmartPlaylistView.js';
 import { MiniPlayerView } from './MiniPlayerView.js';
+import { KeybindingsView } from './KeybindingsView.js';
 import { CommandPalette } from './CommandPalette.js';
 import { ShortcutsBar } from './ShortcutsBar.js';
 import { getTheme } from './Theme.js';
@@ -38,6 +39,7 @@ export class UIManager {
   private statsView: StatsView;
   private smartPlaylistView: SmartPlaylistView;
   private miniPlayerView: MiniPlayerView;
+  private keybindingsView: KeybindingsView;
 
   private tabBoxes: Record<ViewTab, blessed.Widgets.BoxElement>;
 
@@ -81,6 +83,7 @@ export class UIManager {
       equalizer: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       stats: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
       smart: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
+      keys: blessed.box({ parent: this.mainBox, width: '100%', height: '100%', hidden: true }),
     };
 
     // Instantiate views inside container boxes
@@ -94,6 +97,7 @@ export class UIManager {
     this.equalizerView = new EqualizerView(this.tabBoxes.equalizer, this.appStore);
     this.statsView = new StatsView(this.tabBoxes.stats, this.appStore);
     this.smartPlaylistView = new SmartPlaylistView(this.tabBoxes.smart, this.appStore);
+    this.keybindingsView = new KeybindingsView(this.tabBoxes.keys, this.appStore);
     this.miniPlayerView = new MiniPlayerView(this.screen, this.appStore);
 
     this.setupGlobalKeybindings();
@@ -157,6 +161,9 @@ export class UIManager {
       case 'smart':
         this.smartPlaylistView.focus();
         break;
+      case 'keys':
+        this.keybindingsView.focus();
+        break;
     }
   }
 
@@ -175,6 +182,7 @@ export class UIManager {
     this.equalizerView.updateTheme();
     this.statsView.updateTheme();
     this.smartPlaylistView.updateTheme();
+    this.keybindingsView.updateTheme();
     this.miniPlayerView.updateTheme();
     this.screen.render();
   }
@@ -265,6 +273,11 @@ export class UIManager {
     this.screen.key(['r'], () => {
       if (this.commandPalette.isVisible()) return;
       this.appStore.cycleLoopMode();
+    });
+
+    this.screen.key(['-'], () => {
+      if (this.commandPalette.isVisible()) return;
+      this.appStore.setActiveTab('keys');
     });
 
     this.screen.key(['n'], () => {

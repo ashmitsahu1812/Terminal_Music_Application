@@ -62,6 +62,6 @@ export class ShortcutsBar {
       tabInfo = '24-bit ANSI Art';
     }
 
-    return ` {bold}[Space]{/bold} Play/Pause │ {bold}[1-9,0]{/bold} Tabs │ {bold}[n]{/bold} Mini │ {bold}[[/]]{/bold} Speed │ {bold}[v]{/bold} Vis │ {bold}[w]{/bold} Ambient │ {bold}[/]{/bold} Search │ {bold}[:]{/bold} Cmd │ ${tabInfo}`;
+    return ` {bold}[Space]{/bold} Play/Pause │ {bold}[1-9,0,-]{/bold} Tabs │ {bold}[n]{/bold} Mini │ {bold}[[/]]{/bold} Speed │ {bold}[v]{/bold} Vis │ {bold}[w]{/bold} Ambient │ {bold}[/]{/bold} Search │ {bold}[:]{/bold} Cmd │ ${tabInfo}`;
   }
 }

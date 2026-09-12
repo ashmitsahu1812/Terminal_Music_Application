@@ -88,7 +88,7 @@ export interface RadioStation {
   country?: string;
 }
 
-export type ViewTab = 'library' | 'playlists' | 'queue' | 'visualizer' | 'art' | 'lyrics' | 'radio' | 'equalizer' | 'stats' | 'smart';
+export type ViewTab = 'library' | 'playlists' | 'queue' | 'visualizer' | 'art' | 'lyrics' | 'radio' | 'equalizer' | 'stats' | 'smart' | 'keys';
 
 export interface Command {
   name: string;

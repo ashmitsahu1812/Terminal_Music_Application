@@ -410,6 +410,12 @@ export class AppStore extends EventEmitter {
     return this.config;
   }
 
+  public updateConfig(partial: Partial<AppConfig>): void {
+    this.config = { ...this.config, ...partial };
+    this.storageManager.saveConfig(this.config);
+    this.emit('updated');
+  }
+
   public setVolume(vol: number): void {
     this.config.volume = vol;
     this.storageManager.saveConfig(this.config);
